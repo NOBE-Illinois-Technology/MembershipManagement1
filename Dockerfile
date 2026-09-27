@@ -5,7 +5,8 @@
 ################################################################################
 FROM node:20-alpine AS base
 WORKDIR /app
-RUN apk add --no-cache libc6-compat curl
+RUN apk add --no-cache libc6-compat curl git openssh-client && \
+    git config --system --add safe.directory '*'
 
 ################################################################################
 # Stage 2: Install dependencies
@@ -18,14 +19,13 @@ RUN npm ci
 # Stage 3: Development environment (for local development with hot-reloading)
 ################################################################################
 FROM base AS development
-ENV NODE_ENV=development
 ENV PORT=3000
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["sleep", "infinity"]
 
 ################################################################################
 # Stage 4: Production builder

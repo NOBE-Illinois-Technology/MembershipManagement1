@@ -4,6 +4,7 @@ services:
       context: .
       target: development
     container_name: membership-management-dev
+    command: sleep infinity
     ports:
       - "3000:3000"
     volumes:
@@ -15,7 +16,6 @@ services:
     env_file:
       - .env.local
     environment:
-      - NODE_ENV=development
       - PORT=3000
       - WATCHPACK_POLLING=true
     stdin_open: true
