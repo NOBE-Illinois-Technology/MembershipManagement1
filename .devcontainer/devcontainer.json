@@ -3,6 +3,7 @@
   "dockerComposeFile": "../docker-compose.yml",
   "service": "web",
   "workspaceFolder": "/app",
+  "overrideCommand": true,
   "forwardPorts": [3000],
   "customizations": {
     "vscode": {
