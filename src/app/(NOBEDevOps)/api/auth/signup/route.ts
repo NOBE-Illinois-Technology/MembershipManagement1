@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!normalizedEmail.endsWith("@illinois.edu") && normalizedEmail !== "mutyalasrikriti2006@gmail.com") {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return NextResponse.json(
-        { error: "Please use your @illinois.edu email address." },
+        { error: "Please enter a valid email address." },
         { status: 400 }
       );
     }

@@ -15,9 +15,9 @@ export async function POST(req: NextRequest) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!normalizedEmail.endsWith('@illinois.edu') && normalizedEmail !== 'mutyalasrikriti2006@gmail.com') {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return NextResponse.json(
-        { error: 'Please use your @illinois.edu email address.' },
+        { error: 'Please enter a valid email address.' },
         { status: 400 }
       );
     }
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Find the user's name if they exist in People table
     const { data: person } = await supabaseAdmin
-      .from('People')
+      .from('people')
       .select('first_name, name')
       .ilike('illinois_email', normalizedEmail)
       .maybeSingle();

@@ -115,17 +115,6 @@ export default function LoginForm() {
     setError(null);
     setMessage(null);
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const isTestAccount = process.env.NODE_ENV === 'development' && normalizedEmail.endsWith('@nobe.test');
-    if (
-      !normalizedEmail.endsWith('@illinois.edu') &&
-      normalizedEmail !== 'mutyalasrikriti2006@gmail.com' &&
-      !isTestAccount
-    ) {
-      setError('Please use your @illinois.edu email address.');
-      return;
-    }
-
     setSubmitting(true);
 
     if (mode === 'signin') {
@@ -302,7 +291,7 @@ export default function LoginForm() {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="netid@illinois.edu"
+              placeholder="you@example.com"
               required
               className="field-input"
             />
@@ -315,7 +304,7 @@ export default function LoginForm() {
                 type="email"
                 value={confirmEmail}
                 onChange={e => setConfirmEmail(e.target.value)}
-                placeholder="netid@illinois.edu"
+                placeholder="you@example.com"
                 required
                 className="field-input"
               />
