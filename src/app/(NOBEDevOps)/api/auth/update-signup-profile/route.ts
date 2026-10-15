@@ -10,14 +10,14 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient();
   const { data: existing } = await supabase
-    .from('People')
+    .from('people')
     .select('id')
     .or(`auth_id.eq.${auth_id},illinois_email.ilike.${illinois_email}`)
     .maybeSingle();
 
   if (existing) {
     const { error } = await supabase
-      .from('People')
+      .from('people')
       .update({
         auth_id,
         first_name,
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
   } else {
     const { error } = await supabase
-      .from('People')
+      .from('people')
       .insert({
         auth_id,
         first_name,
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     if (error) {
       // Fallback update in case handle_new_user trigger inserted the row concurrently
       const { error: fallbackError } = await supabase
-        .from('People')
+        .from('people')
         .update({
           first_name,
           last_name,

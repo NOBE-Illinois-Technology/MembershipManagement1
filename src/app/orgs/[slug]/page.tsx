@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUserOrgs } from "../../Layer3/getUserOrgs";
 
+export const dynamic = "force-dynamic";
+
 // Placeholder landing page for non-NOBE orgs until each org has its own dashboard.
-// Only orgs the user is a member of resolve; anything else 404s.
 export default async function OrgPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { orgs } = await getUserOrgs();

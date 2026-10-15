@@ -16,7 +16,7 @@ export async function GET() {
 
     // Verify Admin privileges
     const { data: userProfile, error: profileError } = await supabase
-      .from("People")
+      .from("people")
       .select("role")
       .eq("auth_id", user.id)
       .single();

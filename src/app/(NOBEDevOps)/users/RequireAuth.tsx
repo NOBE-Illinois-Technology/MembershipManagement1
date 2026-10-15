@@ -15,7 +15,7 @@ export default function RequireAuth({ children, requireAdmin = false }: Props) {
 
   useEffect(() => {
     if (loading) return;
-    if (user && !profile) return; // Still resolving profile from People table
+    if (user && !profile) return; // Still resolving profile from people table
     if (!user && !profile) {
       router.replace('/users/login');
       return;

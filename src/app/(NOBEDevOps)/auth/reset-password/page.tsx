@@ -78,7 +78,7 @@ function ResetPasswordForm() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { data } = await supabase.from('People').select('role').eq('auth_id', user.id).maybeSingle();
+      const { data } = await supabase.from('people').select('role').eq('auth_id', user.id).maybeSingle();
       setTimeout(() => {
         router.replace(data?.role === 'ADMIN' ? '/users/admin' : '/users/member');
       }, 1500);

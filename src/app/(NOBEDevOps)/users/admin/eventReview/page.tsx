@@ -114,7 +114,7 @@ function EventReviewClient() {
     try {
       const [eventRes, membersRes, attendanceRes, absencesRes] = await Promise.all([
         supabase.from("events").select("*").eq("id", eventId).single(),
-        supabase.from("People").select("id, name, role, auth_id, illinois_email").order("name", { ascending: true }),
+        supabase.from("people").select("id, name, role, auth_id, illinois_email").order("name", { ascending: true }),
         supabase.from("attendance").select("*").eq("event_id", eventId),
         supabase.from("excused_absences").select("*").eq("event_id", eventId),
       ]);

@@ -7,16 +7,16 @@ import { orgHref, orgInitials, type Org } from "./orgs";
 const ORDER_KEY = "layer3-org-order";
 
 // Saved order first, then any orgs the user joined since it was saved.
-function applyOrder(orgs: Org[], order: string[]) {
+function applyOrder(orgs: Org[], order: number[]) {
   const byId = new Map(orgs.map((o) => [o.id, o]));
   const saved = order.flatMap((id) => byId.get(id) ?? []);
   return [...saved, ...orgs.filter((o) => !order.includes(o.id))];
 }
 
-function readSavedOrder(): string[] {
+function readSavedOrder(): number[] {
   try {
     const saved = JSON.parse(localStorage.getItem(ORDER_KEY) ?? "null");
-    return Array.isArray(saved) ? saved : [];
+    return Array.isArray(saved) ? saved.filter((id) => typeof id === "number") : [];
   } catch {
     return [];
   }
@@ -32,11 +32,19 @@ const getSavedOrderRaw = () => {
 };
 const noSubscribe = () => () => {};
 
-export default function OrgDashboard({ orgs, isPlaceholder }: { orgs: Org[]; isPlaceholder: boolean }) {
+export default function OrgDashboard({
+  orgs,
+  isPlaceholder,
+  error,
+}: {
+  orgs: Org[];
+  isPlaceholder: boolean;
+  error: string | null;
+}) {
   const savedOrderRaw = useSyncExternalStore(noSubscribe, getSavedOrderRaw, () => null);
-  const [order, setOrder] = useState<string[] | null>(null);
-  const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [order, setOrder] = useState<number[] | null>(null);
+  const [menuFor, setMenuFor] = useState<number | null>(null);
+  const [draggingId, setDraggingId] = useState<number | null>(null);
 
   // Close an open card menu on any outside click.
   useEffect(() => {
@@ -48,14 +56,14 @@ export default function OrgDashboard({ orgs, isPlaceholder }: { orgs: Org[]; isP
 
   const sorted = applyOrder(orgs, order ?? (savedOrderRaw ? readSavedOrder() : []));
 
-  function saveOrder(ids: string[]) {
+  function saveOrder(ids: number[]) {
     setOrder(ids);
     try {
       localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
     } catch {}
   }
 
-  function move(id: string, toIndex: number) {
+  function move(id: number, toIndex: number) {
     const ids = sorted.map((o) => o.id).filter((x) => x !== id);
     ids.splice(Math.max(0, Math.min(toIndex, ids.length)), 0, id);
     saveOrder(ids);
@@ -75,14 +83,19 @@ export default function OrgDashboard({ orgs, isPlaceholder }: { orgs: Org[]; isP
         <header style={headerStyle}>
           <h1 style={{ margin: 0, fontSize: "40px", fontWeight: 700 }}>Dashboard</h1>
           {isPlaceholder && (
-            <span style={noticeStyle}>Sample orgs: no memberships table yet, or you are not logged in.</span>
+            <span style={noticeStyle}>Sample orgs — create one from Layer 1 to replace them.</span>
           )}
         </header>
 
-        {sorted.length === 0 ? (
+        {error ? (
+          <div role="alert" style={errorBoxStyle}>
+            <strong style={{ display: "block", marginBottom: "4px" }}>Could not load organizations</strong>
+            {error}
+          </div>
+        ) : sorted.length === 0 ? (
           <div style={{ padding: "48px 0", color: "#555" }}>
-            <h2 style={{ margin: "0 0 8px", color: "black" }}>You are not in any orgs yet</h2>
-            Use a join link from your org to get started.
+            <h2 style={{ margin: "0 0 8px", color: "black" }}>No organizations yet</h2>
+            Create one from Layer 1 to get started.
           </div>
         ) : (
           <div style={gridStyle}>
@@ -118,11 +131,14 @@ export default function OrgDashboard({ orgs, isPlaceholder }: { orgs: Org[]; isP
                   </div>
                 </Link>
 
-                <div style={{ padding: "4px 16px 14px" }}>
-                  <span style={{ ...rolePillStyle, borderColor: org.primary_color, color: org.primary_color }}>
-                    {org.role === "ADMIN" ? "Admin" : "Member"}
-                  </span>
-                </div>
+                {/* No memberships table yet, so most orgs have no role to show. */}
+                {org.role && (
+                  <div style={{ padding: "4px 16px 14px" }}>
+                    <span style={{ ...rolePillStyle, borderColor: org.primary_color, color: org.primary_color }}>
+                      {org.role === "ADMIN" ? "Admin" : "Member"}
+                    </span>
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -262,6 +278,17 @@ const headerStyle: React.CSSProperties = {
 const noticeStyle: React.CSSProperties = {
   fontSize: "13px",
   color: "#8a4b00",
+};
+
+const errorBoxStyle: React.CSSProperties = {
+  maxWidth: "720px",
+  padding: "16px 18px",
+  fontSize: "15px",
+  lineHeight: 1.5,
+  color: "#9A3B31",
+  background: "#FBEDEC",
+  border: "1px solid #9A3B31",
+  borderRadius: "10px",
 };
 
 const gridStyle: React.CSSProperties = {

@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
     // Verify Admin privileges
     const { data: userProfile, error: profileError } = await supabase
-      .from("People")
+      .from("people")
       .select("role")
       .eq("auth_id", user.id)
       .single();
@@ -107,9 +107,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch custom calendar ID if it exists in SystemSettings
+    // Fetch custom calendar ID if it exists in system_settings
     const { data: dbSettings } = await supabase
-      .from("SystemSettings")
+      .from("system_settings")
       .select("value")
       .eq("key", "club_calendar_id")
       .maybeSingle();

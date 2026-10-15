@@ -15,7 +15,7 @@ export default async function ReviewMemberStats() {
 
     const [membersRes, eventsRes, attendanceRes, absencesRes, strikesRes, settingsRes, pointRequirements] = await Promise.all([
         supabase
-            .from("People")
+            .from("people")
             .select(
                 "id, name, first_name, last_name, role, auth_id, illinois_email, strikes, year, college, major, committee, social_points, professional_points, service_points, created_at, gcal_refresh_token"
             )
@@ -35,7 +35,7 @@ export default async function ReviewMemberStats() {
             .select("id, user_id, event_id, strike_type, reason, status, source, admin_note, created_at, created_by")
             .order("created_at", { ascending: false }),
         supabase
-            .from("SystemSettings")
+            .from("system_settings")
             .select("key, value"),
         getPointRequirements(),
     ]);

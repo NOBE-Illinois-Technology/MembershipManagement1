@@ -16,7 +16,7 @@ export async function getGoogleOAuth2Client() {
   }
 
   const { data: profile, error } = await supabase
-    .from('People')
+    .from('people')
     .select('gcal_refresh_token')
     .eq('auth_id', user.id)
     .single();
@@ -27,7 +27,7 @@ export async function getGoogleOAuth2Client() {
       throw new Error('Google Calendar not connected (profile not found)');
     }
     if (error.message.includes('column "gcal_refresh_token" does not exist')) {
-      throw new Error('Database schema update required: Please add "gcal_refresh_token" column to "People" table.');
+      throw new Error('Database schema update required: Please add "gcal_refresh_token" column to "people" table.');
     }
     throw new Error(`Failed to fetch Google token: ${error.message}`);
   }

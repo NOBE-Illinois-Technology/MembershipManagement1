@@ -24,9 +24,9 @@ export async function POST(req: NextRequest) {
 
     const supabaseAdmin = createAdminClient();
 
-    // 1. Find the user's name if they exist in People table
+    // 1. Find the user's name if they exist in people table
     const { data: person } = await supabaseAdmin
-      .from('People')
+      .from('people')
       .select('first_name, name')
       .ilike('illinois_email', normalizedEmail)
       .maybeSingle();

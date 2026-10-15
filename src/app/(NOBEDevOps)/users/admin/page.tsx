@@ -102,7 +102,7 @@ export default async function AdminPage() {
     syncSettingRes,
   ] = await Promise.all([
     supabase
-      .from("People")
+      .from("people")
       .select(
         "id, name, first_name, last_name, auth_id, strikes, committee, major, social_points, professional_points, service_points, illinois_email, role, year, college"
       ),
@@ -130,7 +130,7 @@ export default async function AdminPage() {
       .select("id, file_name, content, uploaded_at")
       .order("uploaded_at", { ascending: false }),
     supabase
-      .from("SystemSettings")
+      .from("system_settings")
       .select("value")
       .eq("key", "calendar_last_synced")
       .maybeSingle(),

@@ -100,7 +100,7 @@ export default function ViewAllEvents() {
       const [eventsRes, attendanceRes, peopleRes] = await Promise.all([
         supabase.from("events").select("*").order("date", { ascending: true }),
         supabase.from("attendance").select("user_id, event_id"),
-        supabase.from("People").select("id, auth_id")
+        supabase.from("people").select("id, auth_id")
       ]);
 
       if (eventsRes.error) throw eventsRes.error;

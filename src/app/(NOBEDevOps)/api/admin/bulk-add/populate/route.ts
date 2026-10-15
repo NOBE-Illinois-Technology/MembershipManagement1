@@ -200,7 +200,7 @@ export async function POST(request: Request) {
 
     for (const person of peopleData) {
       const { data: existing } = await supabaseAdmin
-        .from("People")
+        .from("people")
         .select("id, name, first_name, last_name, illinois_email, college, year, major, committee")
         .eq("illinois_email", person.illinois_email)
         .eq("first_name", person.first_name)
@@ -235,20 +235,20 @@ export async function POST(request: Request) {
       // The handle_new_user trigger already created a bare-bones People row
       // for this auth_id — update it with the real CSV data instead of inserting.
       const { data: existingByAuth } = await supabaseAdmin
-        .from("People")
+        .from("people")
         .select("id")
         .eq("auth_id", authId)
         .maybeSingle();
 
       if (existingByAuth) {
         const { error: updateError } = await supabaseAdmin
-          .from("People")
+          .from("people")
           .update({ ...person, role: "MEMBER" })
           .eq("id", existingByAuth.id);
         if (updateError) throw updateError;
       } else {
         const { error: insertError } = await supabaseAdmin
-          .from("People")
+          .from("people")
           .insert({ ...person, auth_id: authId, role: "MEMBER" });
         if (insertError) throw insertError;
       }
