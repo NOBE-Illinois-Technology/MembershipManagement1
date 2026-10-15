@@ -191,7 +191,7 @@ export default function EventList() {
 
 
       const { data, error: fetchError } = await supabase
-        .from('People')
+        .from('people')
         .select(
           'name, first_name, last_name, year, college, major, committee, social_points, professional_points, service_points, strikes, auth_id'
         )

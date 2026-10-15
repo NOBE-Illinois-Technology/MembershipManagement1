@@ -20,4 +20,8 @@ services:
       - WATCHPACK_POLLING=true
     stdin_open: true
     tty: true
-    restart: unless-stopped
+    # Deliberately no `restart:` policy. This is a dev container driven by "Reopen in
+    # Container" and `npm run dev` — closing it should stop the site. An auto-restart policy
+    # also resurrects the container on Docker Desktop boot *without* Compose running, which
+    # can bring it back attached to no network at all: every Supabase call then fails with a
+    # confusing downstream error. Start it with `docker compose up -d`.

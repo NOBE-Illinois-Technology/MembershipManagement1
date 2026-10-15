@@ -87,16 +87,16 @@ export async function POST(req: NextRequest) {
       authUserId = newAuthData.user.id;
     }
 
-    // 2. Link / update People table profile
+    // 2. Link / update people table profile
     const { data: personRecord } = await supabaseAdmin
-      .from("People")
+      .from("people")
       .select("id, role")
       .or(`auth_id.eq.${authUserId},illinois_email.ilike.${normalizedEmail}`)
       .maybeSingle();
 
     if (personRecord) {
       const { error: updateError } = await supabaseAdmin
-        .from("People")
+        .from("people")
         .update({
           auth_id: authUserId,
           first_name: firstName.trim(),
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       const { error: insertError } = await supabaseAdmin
-        .from("People")
+        .from("people")
         .insert({
           auth_id: authUserId,
           first_name: firstName.trim(),
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
       if (insertError) {
         // Fallback update if trigger created it concurrently
         const { error: fallbackError } = await supabaseAdmin
-          .from("People")
+          .from("people")
           .update({
             first_name: firstName.trim(),
             last_name: lastName.trim(),

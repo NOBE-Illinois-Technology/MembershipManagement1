@@ -60,14 +60,14 @@ export async function POST(req: NextRequest) {
     if (customCalendarId) {
       query = query.like('gcal_event_id', `imported:public:${customCalendarId}:%`);
       await supabase
-        .from('SystemSettings')
+        .from('system_settings')
         .delete()
         .eq('key', 'club_calendar_id')
         .eq('value', customCalendarId);
     } else {
       query = query.not('gcal_event_id', 'is', null).is('qr_code_secret', null);
       await supabase
-        .from('SystemSettings')
+        .from('system_settings')
         .delete()
         .eq('key', 'club_calendar_id');
     }

@@ -16,7 +16,7 @@ export default async function AddStrikePage({ params }: AddStrikePageProps) {
 
     const [{ data: member }, { data: events }] = await Promise.all([
         supabase
-            .from("People")
+            .from("people")
             .select("id, name, illinois_email, auth_id")
             .eq("id", Number(memberId))
             .single(),

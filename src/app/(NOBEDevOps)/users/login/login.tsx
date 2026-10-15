@@ -128,7 +128,7 @@ export default function LoginForm() {
 
       if (data.user) {
         const { data: person } = await supabase
-          .from('People')
+          .from('people')
           .select('role')
           .eq('auth_id', data.user.id)
           .maybeSingle();
@@ -172,7 +172,7 @@ export default function LoginForm() {
           setMode('signin');
         } else {
           const { data: person } = await supabase
-            .from('People')
+            .from('people')
             .select('role')
             .eq('auth_id', signInData.user.id)
             .maybeSingle();

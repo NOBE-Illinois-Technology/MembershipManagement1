@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     if (user) {
       const { error } = await supabase
-        .from('People')
+        .from('people')
         .update({ gcal_refresh_token: tokens.refresh_token })
         .eq('auth_id', user.id);
       

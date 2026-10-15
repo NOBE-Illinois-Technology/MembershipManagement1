@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     if (testEmails) {
       const { data: matched } = await supabaseAdmin
-        .from("People")
+        .from("people")
         .select("illinois_email, first_name, professional_points, service_points, social_points")
         .in("illinois_email", testEmails);
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       const { data: people, error: peopleError } = await supabaseAdmin
-        .from("People")
+        .from("people")
         .select("illinois_email, first_name, professional_points, service_points, social_points")
         .not("auth_id", "is", null)
         .not("illinois_email", "is", null)

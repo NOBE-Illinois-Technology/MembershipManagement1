@@ -34,7 +34,7 @@ export default async function ReviewAbsence() {
       .select("id, user_id, reason, status, submitted_at, admin_response, reviewed_at, email_sent, email_error, image_url")
       .order("submitted_at", { ascending: false }),
     supabase
-      .from("People")
+      .from("people")
       .select("auth_id, name, illinois_email"),
   ]);
 

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     const goals = await getPointRequirements();
 
     const { data: people, error: peopleError } = await supabaseAdmin
-      .from("People")
+      .from("people")
       .select("illinois_email, first_name, professional_points, service_points, social_points")
       .not("auth_id", "is", null)
       .not("illinois_email", "is", null);

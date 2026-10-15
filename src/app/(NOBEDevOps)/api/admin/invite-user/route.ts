@@ -56,16 +56,16 @@ export async function POST(req: NextRequest) {
     authUserId = createData.user.id;
   }
 
-  // Ensure People table row exists and is linked
+  // Ensure people table row exists and is linked
   if (authUserId) {
     const { data: existingPerson } = await supabase
-      .from('People')
+      .from('people')
       .select('id')
       .or(`auth_id.eq.${authUserId},illinois_email.ilike.${email}`)
       .maybeSingle();
 
     if (!existingPerson) {
-      const { error: insertError } = await supabase.from('People').insert({
+      const { error: insertError } = await supabase.from('people').insert({
         auth_id: authUserId,
         illinois_email: email,
         name: email.split('@')[0],
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       });
       if (insertError) {
         await supabase
-          .from('People')
+          .from('people')
           .update({
             illinois_email: email,
             name: email.split('@')[0],
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       await supabase
-        .from('People')
+        .from('people')
         .update({
           auth_id: authUserId,
           illinois_email: email,

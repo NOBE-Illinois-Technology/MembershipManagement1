@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     let finalCalendarId = customCalendarId;
     if (!requestedCalendarId) {
       const { data: dbSettings } = await supabase
-        .from('SystemSettings')
+        .from('system_settings')
         .select('value')
         .eq('key', 'club_calendar_id')
         .maybeSingle();
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
 
     if (isCustomCalendar && customCalendarId) {
       await supabase
-        .from('SystemSettings')
+        .from('system_settings')
         .upsert({ key: 'club_calendar_id', value: customCalendarId });
     }
 

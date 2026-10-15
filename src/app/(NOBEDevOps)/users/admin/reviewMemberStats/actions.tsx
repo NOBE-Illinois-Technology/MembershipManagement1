@@ -16,7 +16,7 @@ export async function deleteMember(
     let targetEmail = email || null;
 
     const { data: memberRecord } = await supabaseAdmin
-        .from("People")
+        .from("people")
         .select("id, auth_id, illinois_email")
         .eq("id", memberId)
         .maybeSingle();
@@ -73,13 +73,13 @@ export async function deleteMember(
 
     // 4. Delete officer notes for this member
     await supabaseAdmin
-        .from("SystemSettings")
+        .from("system_settings")
         .delete()
         .eq("key", `officer_notes_member_id_${memberId}`);
 
-    // 5. Delete member from People table
+    // 5. Delete member from people table
     const { error: deletePeopleError } = await supabaseAdmin
-        .from("People")
+        .from("people")
         .delete()
         .eq("id", memberId);
 
@@ -90,13 +90,13 @@ export async function deleteMember(
     // Clean up any remaining rows in People that match target authId or email
     for (const uid of authIdsToDelete) {
         await supabaseAdmin
-            .from("People")
+            .from("people")
             .delete()
             .eq("auth_id", uid);
     }
     if (targetEmail) {
         await supabaseAdmin
-            .from("People")
+            .from("people")
             .delete()
             .ilike("illinois_email", targetEmail.trim());
     }
@@ -191,7 +191,7 @@ export async function updateMemberPoints(memberId: number, category: "profession
     const supabase = await createClient();
 
     const { data: member, error: fetchError } = await supabase
-        .from("People")
+        .from("people")
         .select("professional_points, social_points, service_points")
         .eq("id", memberId)
         .single();
@@ -214,7 +214,7 @@ export async function updateMemberPoints(memberId: number, category: "profession
     }
 
     const { error: updateError } = await supabase
-        .from("People")
+        .from("people")
         .update({ [updateField]: newPoints })
         .eq("id", memberId);
 
@@ -230,7 +230,7 @@ export async function updateOfficerNotes(memberId: number, notes: string) {
 
     const key = `officer_notes_member_id_${memberId}`;
     const { error } = await supabase
-        .from("SystemSettings")
+        .from("system_settings")
         .upsert({ key, value: notes });
 
     if (error) {
@@ -246,7 +246,7 @@ export async function updateMemberRole(memberId: number, role: string) {
     const normalizedRole = role.trim().toUpperCase();
 
     const { error } = await supabase
-        .from("People")
+        .from("people")
         .update({ role: normalizedRole })
         .eq("id", memberId);
 
@@ -261,7 +261,7 @@ export async function deactivateMember(memberId: number) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("People")
+        .from("people")
         .update({ auth_id: null })
         .eq("id", memberId);
 
@@ -323,7 +323,7 @@ export async function editMemberDetails(
     }
 
     const { error } = await supabase
-        .from("People")
+        .from("people")
         .update(updateData)
         .eq("id", memberId);
 

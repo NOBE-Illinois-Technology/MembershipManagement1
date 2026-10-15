@@ -22,7 +22,7 @@ export async function updateMemberProfile({
   if (userError || !user) return { error: 'Not authenticated.' };
 
   const { error } = await supabase
-    .from('People')
+    .from('people')
     .update({
       first_name,
       last_name,

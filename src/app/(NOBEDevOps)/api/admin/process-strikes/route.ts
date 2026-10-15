@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       
       // 2. Get all people
       const { data: people, error: peopleError } = await adminClient
-        .from("People")
+        .from("people")
         .select("auth_id, name, illinois_email, strikes");
 
       if (peopleError || !people) {
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
             const newStrikes = (person.strikes || 0) + 1;
 
             const { error: updatePeopleError } = await adminClient
-              .from("People")
+              .from("people")
               .update({ strikes: newStrikes })
               .eq("auth_id", person.auth_id);
 

@@ -78,7 +78,7 @@ export async function POST(req: Request) {
     }
 
     const { data: profile, error: profileError } = await supabase
-      .from("People")
+      .from("people")
       .select(`
         professional_points,
         service_points,
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
     let updatedProfile = profile;
     if (Object.keys(updates).length > 0) {
       const { data: updated, error: updateError } = await supabase
-        .from("People")
+        .from("people")
         .update(updates)
         .eq("auth_id", user.id)
         .select(`
