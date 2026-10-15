@@ -6,3 +6,16 @@
 ### Project Tech Stack:
 
 Testing testing
+
+### Google sign-in:
+
+Enable the Google provider in **Supabase Dashboard → Authentication → Sign In / Providers** and add the Google OAuth client ID and secret. In **Authentication → URL Configuration**, allow the application callback URL:
+
+- `http://localhost:3000/PortalLoginPage/google/callback` for local development
+- `https://<your-domain>/PortalLoginPage/google/callback` for production
+
+Use the Supabase-provided callback URL (`https://<project-ref>.supabase.co/auth/v1/callback`) as the authorized redirect URI in the Google OAuth client. Google sign-in and account creation accept any valid email address.
+
+### Supabase `people` table:
+
+The application uses the lowercase `public.people` table. Apply the SQL in `supabase/migrations/20261011213800_fix_people_auth_trigger.sql` to your Supabase project (for example, in the Supabase SQL Editor) so the `auth.users` trigger writes to the existing table when accounts are created.
