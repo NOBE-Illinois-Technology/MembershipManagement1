@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/app/(NOBEDevOps)/utils/supabase/admin";
 import { ORG_SELECT } from "@/app/Layer3/getUserOrgs";
+import { ensurePerson, getSignedInUser, joinOrg } from "@/lib/membership";
 import {
   DEFAULT_ORG_COLOR,
   HEX_COLOR,
@@ -28,10 +29,11 @@ function describeDbError(error: { message?: string; hint?: string | null }) {
   return error.hint ? `${message} (${error.hint})` : message;
 }
 
-// Creates an organization. There is no sign-in on the Layer 1 / Layer 3 route yet, so no
-// creator is recorded and no membership row is written — `organizations` has no created_by
-// column. Both arrive with the auth ticket; until then every org is visible to everyone.
+// Creates an organization and makes the signed-in creator its ADMIN.
 export async function POST(request: Request) {
+  const user = await getSignedInUser();
+  if (!user) return fail("You must be signed in to create an organization.", 401);
+
   let body: unknown;
   try {
     body = await request.json();
@@ -94,7 +96,20 @@ export async function POST(request: Request) {
       .select(ORG_SELECT)
       .single();
 
-    if (!error) return NextResponse.json({ org: data }, { status: 201 });
+    if (!error) {
+      try {
+        await joinOrg(supabase, await ensurePerson(user), data.id, "ADMIN");
+      } catch (membershipError) {
+        // An org nobody belongs to would be invisible to everyone, so don't leave it behind.
+        await supabase.from("organizations").delete().eq("id", data.id);
+        console.error("[POST /api/orgs] could not add creator as admin:", membershipError);
+        return fail(
+          membershipError instanceof Error ? membershipError.message : "Could not add you to the new organization.",
+          502
+        );
+      }
+      return NextResponse.json({ org: { ...data, role: "ADMIN" } }, { status: 201 });
+    }
 
     if (error.code === UNIQUE_VIOLATION) {
       taken.add(slug);

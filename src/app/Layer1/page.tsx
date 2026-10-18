@@ -40,7 +40,7 @@ export default function Layer1Page() {
       }}>
         <CreateOrgButton />
         <Link href="/Layer3" style={pillStyle}>Go to Layer 3</Link>
-        <Link href="/users/login" style={pillStyle}>Go to NOBE DevOps</Link>
+        <Link href="/users/member" style={pillStyle}>Go to NOBE DevOps</Link>
         <Link href="/PortalLoginPage" style={{...pillStyle, position: "absolute", bottom: "30px", right: "30px",}}>Back to Login</Link>
       </main>
     </div>

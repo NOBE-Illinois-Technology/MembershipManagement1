@@ -77,16 +77,9 @@ function ResetPasswordForm() {
     setSuccess(true);
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase.from('people').select('role').eq('auth_id', user.id).maybeSingle();
-      setTimeout(() => {
-        router.replace(data?.role === 'ADMIN' ? '/users/admin' : '/users/member');
-      }, 1500);
-    } else {
-      setTimeout(() => {
-        router.replace('/users/login?confirmed=1');
-      }, 1500);
-    }
+    setTimeout(() => {
+      router.replace(user ? '/Layer3' : '/PortalLoginPage?confirmed=1');
+    }, 1500);
 
     setSubmitting(false);
   }
@@ -114,7 +107,7 @@ function ResetPasswordForm() {
             <div className="message-error">{error}</div>
             {isFatalError && (
               <Link
-                href="/users/login"
+                href="/PortalLoginPage"
                 className="btn-secondary button-full"
                 style={{ marginTop: '12px', textAlign: 'center', textDecoration: 'none', display: 'block' }}
               >
