@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { addLoginToOrg, NOBE_SLUG, requireOrgAdmin } from '@/lib/membership';
 
 function generateTempPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -7,6 +8,13 @@ function generateTempPassword() {
 }
 
 export async function POST(req: NextRequest) {
+  // Inviting creates a login and a NOBE membership, so only NOBE admins may do it.
+  try {
+    await requireOrgAdmin(NOBE_SLUG);
+  } catch (authError) {
+    return NextResponse.json({ error: (authError as Error).message }, { status: 403 });
+  }
+
   const { email } = await req.json();
   const normalizedEmail = email ? email.trim().toLowerCase() : '';
 
@@ -89,10 +97,16 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', existingPerson.id);
     }
+
+    try {
+      await addLoginToOrg(authUserId, NOBE_SLUG);
+    } catch (membershipError) {
+      return NextResponse.json({ error: (membershipError as Error).message }, { status: 500 });
+    }
   }
 
   const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-  const loginUrl = `${origin}/users/login`;
+  const loginUrl = `${origin}/PortalLoginPage`;
 
 
   const gasUrl = process.env.GAS_EMAIL_URL;

@@ -35,19 +35,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function fetchProfile(authId: string) {
-    const { data, error } = await supabase
-      .from('people')
-      .select('id, name, role, auth_id')
-      .eq('auth_id', authId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Could not fetch profile:', error.message);
-      setProfile(null);
-    } else if (data) {
-      setProfile(data as UserProfile);
-    } else {
+  // Profile + NOBE role come from the server (people + memberships). A signed-in user who isn't
+  // a NOBE member ends up with profile = null, and RequireAuth sends them back to the dashboard.
+  async function fetchProfile() {
+    try {
+      const res = await fetch('/api/orgs/nobe/me', { cache: 'no-store' });
+      if (!res.ok) {
+        if (res.status !== 403) console.error('Could not fetch profile:', res.status);
+        setProfile(null);
+        return;
+      }
+      const { profile } = (await res.json()) as { profile: UserProfile };
+      setProfile(profile);
+    } catch (error) {
+      console.error('Could not fetch profile:', error);
       setProfile(null);
     }
   }
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session?.user) {
         // User is already logged in 
-        fetchProfile(session.user.id).finally(() => setLoading(false));
+        fetchProfile().finally(() => setLoading(false));
       } else {
         // No session stop loading and show login form
         setLoading(false);
@@ -94,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session?.user) {
         setLoading(true);
-        fetchProfile(session.user.id).finally(() => setLoading(false));
+        fetchProfile().finally(() => setLoading(false));
       } else {
         setProfile(null);
         setLoading(false);

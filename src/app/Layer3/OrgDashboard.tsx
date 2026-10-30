@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/app/(NOBEDevOps)/utils/supabase/client";
 import { orgHref, orgInitials, type Org } from "./orgs";
 
 const ORDER_KEY = "layer3-org-order";
@@ -34,11 +36,9 @@ const noSubscribe = () => () => {};
 
 export default function OrgDashboard({
   orgs,
-  isPlaceholder,
   error,
 }: {
   orgs: Org[];
-  isPlaceholder: boolean;
   error: string | null;
 }) {
   const savedOrderRaw = useSyncExternalStore(noSubscribe, getSavedOrderRaw, () => null);
@@ -76,15 +76,12 @@ export default function OrgDashboard({
         <RailItem href="/Layer3" label="Dashboard" icon={<DashboardIcon />} active />
         <RailItem href="/Layer1" label="Layer 1" icon={<HomeIcon />} />
         <RailItem href="/Layer2" label="Layer 2" icon={<TableIcon />} />
-        <RailItem href="/PortalLoginPage" label="Log out" icon={<BackIcon />} />
+        <LogoutRailItem />
       </nav>
 
       <main style={mainStyle}>
         <header style={headerStyle}>
           <h1 style={{ margin: 0, fontSize: "40px", fontWeight: 700 }}>Dashboard</h1>
-          {isPlaceholder && (
-            <span style={noticeStyle}>Sample orgs — create one from Layer 1 to replace them.</span>
-          )}
         </header>
 
         {error ? (
@@ -95,7 +92,7 @@ export default function OrgDashboard({
         ) : sorted.length === 0 ? (
           <div style={{ padding: "48px 0", color: "#555" }}>
             <h2 style={{ margin: "0 0 8px", color: "black" }}>No organizations yet</h2>
-            Create one from Layer 1 to get started.
+            Create one from Layer 1, or ask an org admin to add you.
           </div>
         ) : (
           <div style={gridStyle}>
@@ -131,14 +128,11 @@ export default function OrgDashboard({
                   </div>
                 </Link>
 
-                {/* No memberships table yet, so most orgs have no role to show. */}
-                {org.role && (
-                  <div style={{ padding: "4px 16px 14px" }}>
-                    <span style={{ ...rolePillStyle, borderColor: org.primary_color, color: org.primary_color }}>
-                      {org.role === "ADMIN" ? "Admin" : "Member"}
-                    </span>
-                  </div>
-                )}
+                <div style={{ padding: "4px 16px 14px" }}>
+                  <span style={{ ...rolePillStyle, borderColor: org.primary_color, color: org.primary_color }}>
+                    {org.role === "ADMIN" ? "Admin" : "Member"}
+                  </span>
+                </div>
 
                 <button
                   type="button"
@@ -184,6 +178,35 @@ function RailItem({ href, label, icon, active = false }: { href: string; label: 
       {icon}
       <span>{label}</span>
     </Link>
+  );
+}
+
+// Signs out of the portal (and so of every org), then returns to the portal login.
+function LogoutRailItem() {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleLogout() {
+    setSigningOut(true);
+    try {
+      await createClient().auth.signOut();
+    } catch (e) {
+      console.error("Sign out failed", e);
+    }
+    router.replace("/PortalLoginPage");
+    router.refresh();
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleLogout}
+      disabled={signingOut}
+      style={{ ...railItemStyle, background: "transparent", color: "white", border: 0, fontFamily: "inherit", cursor: "pointer" }}
+    >
+      <BackIcon />
+      <span>{signingOut ? "Logging out…" : "Log out"}</span>
+    </button>
   );
 }
 
@@ -273,11 +296,6 @@ const headerStyle: React.CSSProperties = {
   paddingBottom: "16px",
   marginBottom: "32px",
   borderBottom: "1px solid #C7CDD1",
-};
-
-const noticeStyle: React.CSSProperties = {
-  fontSize: "13px",
-  color: "#8a4b00",
 };
 
 const errorBoxStyle: React.CSSProperties = {

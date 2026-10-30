@@ -3,6 +3,13 @@
 import { createClient } from "@/app/(NOBEDevOps)/utils/supabase/server";
 import { createAdminClient } from "@/app/(NOBEDevOps)/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { NOBE_SLUG, requireOrgAdmin, setOrgRole, type OrgRole } from "@/lib/membership";
+
+function toOrgRole(role: string): OrgRole {
+    const normalized = role.trim().toUpperCase();
+    if (normalized !== "ADMIN" && normalized !== "MEMBER") throw new Error(`Unknown role "${role}".`);
+    return normalized;
+}
 
 export async function deleteMember(
     memberId: number,
@@ -240,19 +247,10 @@ export async function updateOfficerNotes(memberId: number, notes: string) {
     revalidatePath("/users/admin/reviewMemberStats");
 }
 
+// Roles are per org and live on memberships; only a NOBE admin may change NOBE roles.
 export async function updateMemberRole(memberId: number, role: string) {
-    const supabase = await createClient();
-
-    const normalizedRole = role.trim().toUpperCase();
-
-    const { error } = await supabase
-        .from("people")
-        .update({ role: normalizedRole })
-        .eq("id", memberId);
-
-    if (error) {
-        throw new Error(error.message);
-    }
+    await requireOrgAdmin(NOBE_SLUG);
+    await setOrgRole(memberId, NOBE_SLUG, toOrgRole(role));
 
     revalidatePath("/users/admin/reviewMemberStats");
 }
@@ -299,6 +297,9 @@ export async function editMemberDetails(
         role?: string;
     }
 ) {
+    const role = payload.role ? toOrgRole(payload.role) : null;
+    if (role) await requireOrgAdmin(NOBE_SLUG);
+
     const supabase = await createClient();
 
     const updateData: {
@@ -308,7 +309,6 @@ export async function editMemberDetails(
         year: string;
         college: string;
         committee: string;
-        role?: string;
     } = {
         name: payload.name.trim(),
         illinois_email: payload.illinois_email.trim(),
@@ -318,10 +318,6 @@ export async function editMemberDetails(
         committee: payload.committee.trim(),
     };
 
-    if (payload.role) {
-        updateData.role = payload.role.trim().toUpperCase();
-    }
-
     const { error } = await supabase
         .from("people")
         .update(updateData)
@@ -330,6 +326,8 @@ export async function editMemberDetails(
     if (error) {
         throw new Error(error.message);
     }
+
+    if (role) await setOrgRole(memberId, NOBE_SLUG, role);
 
     revalidatePath("/users/admin/reviewMemberStats");
 }

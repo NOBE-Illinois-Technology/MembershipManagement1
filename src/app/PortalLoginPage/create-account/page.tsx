@@ -101,7 +101,7 @@ export default function CreateAccountPage() {
         return;
       }
 
-      router.replace('/Layer1');
+      router.replace('/Layer3');
       router.refresh();
     } catch (signupError) {
       console.error('Account creation failed:', signupError);

@@ -38,7 +38,7 @@ function ConfirmEmailInner() {
     }
 
     setStage("done");
-    setTimeout(() => router.push("/users/login?confirmed=1"), 1500);
+    setTimeout(() => router.push("/PortalLoginPage?confirmed=1"), 1500);
   }
 
   return (

@@ -5,6 +5,6 @@ import { getUserOrgs } from "./getUserOrgs";
 export const dynamic = "force-dynamic";
 
 export default async function Layer3Page() {
-  const { orgs, isPlaceholder, error } = await getUserOrgs();
-  return <OrgDashboard orgs={orgs} isPlaceholder={isPlaceholder} error={error} />;
+  const { orgs, error } = await getUserOrgs();
+  return <OrgDashboard orgs={orgs} error={error} />;
 }

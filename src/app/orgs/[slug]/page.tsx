@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 // Placeholder landing page for non-NOBE orgs until each org has its own dashboard.
 export default async function OrgPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { orgs } = await getUserOrgs();
+  // Only orgs you belong to: anyone else gets a 404, same as a slug that doesn't exist.
+  const { orgs } = await getUserOrgs(`/orgs/${slug}`);
   const org = orgs.find((o) => o.slug === slug);
   if (!org) notFound();
 

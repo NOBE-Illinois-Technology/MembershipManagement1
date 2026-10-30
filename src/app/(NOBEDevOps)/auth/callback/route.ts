@@ -54,16 +54,16 @@ export async function GET(req: NextRequest) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const destination = next ?? (type === 'recovery' ? '/auth/reset-password' : '/users/login');
+      const destination = next ?? (type === 'recovery' ? '/auth/reset-password' : '/Layer3');
       return NextResponse.redirect(`${origin}${destination}`);
     }
   } else if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({ token_hash, type });
     if (!error) {
-      const destination = next ?? (type === 'recovery' ? '/auth/reset-password' : '/users/login');
+      const destination = next ?? (type === 'recovery' ? '/auth/reset-password' : '/Layer3');
       return NextResponse.redirect(`${origin}${destination}`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/users/login?error=link_expired${type ? `&type=${type}` : ''}`);
+  return NextResponse.redirect(`${origin}/PortalLoginPage?error=link_expired${type ? `&type=${type}` : ''}`);
 }
