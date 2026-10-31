@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUserOrgs } from "../../Layer3/getUserOrgs";
+import OrgViews from "./OrgViews";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +18,15 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
       minHeight: "100vh",
       display: "flex",
       flexDirection: "column",
-      justifyContent: "center",
+      padding: "48px 24px 120px",
       alignItems: "center",
       gap: "16px",
+      boxSizing: "border-box",
       fontFamily: "Roboto, sans-serif",
       background: `linear-gradient(135deg, ${org.primary_color}55, #FBFBF9)`,
       position: "relative",
     }}>
-      <h1 style={{ fontSize: "48px", margin: 0 }}>{org.name}</h1>
-      <p style={{ fontSize: "20px", margin: 0 }}>Org dashboard coming soon.</p>
+      <OrgViews org={org} />
 
       <Link href="/Layer3" style={{
         ...pillStyle,

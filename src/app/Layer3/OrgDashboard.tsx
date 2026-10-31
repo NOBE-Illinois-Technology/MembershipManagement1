@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/app/(NOBEDevOps)/utils/supabase/client";
 import { orgHref, orgInitials, type Org } from "./orgs";
+import CreateOrgButton from "./CreateOrgButton";
 
 const ORDER_KEY = "layer3-org-order";
 
@@ -74,15 +75,17 @@ export default function OrgDashboard({
       <nav style={railStyle} aria-label="Main">
         <div style={railLogoStyle}>M</div>
         <RailItem href="/Layer3" label="Dashboard" icon={<DashboardIcon />} active />
-        <RailItem href="/Layer1" label="Layer 1" icon={<HomeIcon />} />
         <RailItem href="/Layer2" label="Layer 2" icon={<TableIcon />} />
         <LogoutRailItem />
       </nav>
 
       <main style={mainStyle}>
-        <header style={headerStyle}>
-          <h1 style={{ margin: 0, fontSize: "40px", fontWeight: 700 }}>Dashboard</h1>
-        </header>
+          <header style={headerStyle}>
+            <h1 style={{ margin: 0, fontSize: "40px", fontWeight: 700 }}>Dashboard</h1>
+            <div style={{ marginLeft: "auto" }}>
+              <CreateOrgButton />
+            </div>
+          </header>
 
         {error ? (
           <div role="alert" style={errorBoxStyle}>
@@ -92,7 +95,7 @@ export default function OrgDashboard({
         ) : sorted.length === 0 ? (
           <div style={{ padding: "48px 0", color: "#555" }}>
             <h2 style={{ margin: "0 0 8px", color: "black" }}>No organizations yet</h2>
-            Create one from Layer 1, or ask an org admin to add you.
+            Create one with + Create org, or ask an org admin to add you.
           </div>
         ) : (
           <div style={gridStyle}>
@@ -222,9 +225,6 @@ const iconProps = { width: 28, height: 28, viewBox: "0 0 24 24", fill: "none", s
 const DashboardIcon = () => (
   <svg {...iconProps}><path d="M4 16a8 8 0 1 1 16 0" /><path d="M12 16l4-5" /><path d="M3 20h18" /></svg>
 );
-const HomeIcon = () => (
-  <svg {...iconProps}><path d="M3 11l9-7 9 7" /><path d="M5 10v10h14V10" /></svg>
-);
 const TableIcon = () => (
   <svg {...iconProps}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M9 10v10" /></svg>
 );
@@ -290,7 +290,7 @@ const mainStyle: React.CSSProperties = {
 
 const headerStyle: React.CSSProperties = {
   display: "flex",
-  alignItems: "baseline",
+  alignItems: "center",
   flexWrap: "wrap",
   gap: "8px 20px",
   paddingBottom: "16px",
