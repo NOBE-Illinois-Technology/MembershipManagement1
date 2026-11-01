@@ -14,6 +14,11 @@ const inputStyle = {
   outlineColor: '#31845a',
 };
 
+function getSafeNextPath() {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next?.startsWith("/") && !next.startsWith("//") ? next : "/Layer1";
+}
+
 export default function PortalLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -21,8 +26,14 @@ export default function PortalLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const [nextQuery, setNextQuery] = useState("");
 
   useEffect(() => {
+    const next = new URLSearchParams(window.location.search).get("next");
+    if (next?.startsWith("/") && !next.startsWith("//")) {
+      setNextQuery(`?next=${encodeURIComponent(next)}`);
+    }
+
     const googleError = new URLSearchParams(window.location.search).get('google_error');
     const errorMessages: Record<string, string> = {
       oauth: 'Google sign in could not be completed. Please try again.',
@@ -41,7 +52,7 @@ export default function PortalLoginPage() {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/PortalLoginPage/google/callback`,
+          redirectTo: `${window.location.origin}/PortalLoginPage/google/callback?next=${encodeURIComponent(getSafeNextPath())}`,
         },
       });
 
@@ -73,7 +84,7 @@ export default function PortalLoginPage() {
         return;
       }
 
-      router.replace('/Layer1');
+      router.replace(getSafeNextPath());
       router.refresh();
     } catch (loginError) {
       console.error('Portal sign-in failed:', loginError);
@@ -208,7 +219,10 @@ export default function PortalLoginPage() {
 
         <p style={{ margin: '20px 0 0', color: '#5d6861' }}>
           Need an account?{' '}
-          <Link href="/PortalLoginPage/create-account" style={{ color: '#246b46', fontWeight: 700 }}>
+          <Link
+            href={`/PortalLoginPage/create-account${nextQuery}`}
+            style={{ color: '#246b46', fontWeight: 700 }}
+          >
             Create account
           </Link>
         </p>

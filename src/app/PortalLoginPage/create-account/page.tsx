@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -21,6 +21,11 @@ const labelStyle = {
   fontWeight: 600,
 };
 
+function getSafeNextPath() {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next?.startsWith("/") && !next.startsWith("//") ? next : "/Layer1";
+}
+
 export default function CreateAccountPage() {
   const router = useRouter();
   const [firstName, setFirstName] = useState('');
@@ -32,6 +37,14 @@ export default function CreateAccountPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const [nextQuery, setNextQuery] = useState("");
+
+  useEffect(() => {
+    const next = new URLSearchParams(window.location.search).get("next");
+    if (next?.startsWith("/") && !next.startsWith("//")) {
+      setNextQuery(`?next=${encodeURIComponent(next)}`);
+    }
+  }, []);
 
   async function handleGoogleSignUp() {
     setError(null);
@@ -42,7 +55,7 @@ export default function CreateAccountPage() {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/PortalLoginPage/google/callback`,
+          redirectTo: `${window.location.origin}/PortalLoginPage/google/callback?next=${encodeURIComponent(getSafeNextPath())}`,
         },
       });
 
@@ -101,7 +114,7 @@ export default function CreateAccountPage() {
         return;
       }
 
-      router.replace('/Layer1');
+      router.replace(getSafeNextPath());
       router.refresh();
     } catch (signupError) {
       console.error('Account creation failed:', signupError);
@@ -285,7 +298,7 @@ export default function CreateAccountPage() {
 
         <p style={{ margin: '20px 0 0', color: '#5d6861' }}>
           Already have an account?{' '}
-          <Link href="/PortalLoginPage" style={{ color: '#246b46', fontWeight: 700 }}>
+          <Link href={`/PortalLoginPage${nextQuery}`} style={{ color: '#246b46', fontWeight: 700 }}>
             Sign in
           </Link>
         </p>

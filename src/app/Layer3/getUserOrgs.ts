@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/app/(NOBEDevOps)/utils/supabase/admin";
+import { createClient as createSessionClient } from "@/app/(NOBEDevOps)/utils/supabase/server";
 import { DEFAULT_ORG_COLOR, PLACEHOLDER_ORGS, type Org } from "./orgs";
 
 // Every column the org cards need. Shared with the create-org route so a new org
@@ -13,9 +14,7 @@ export type OrgsResult = {
 
 type OrgRow = Omit<Org, "primary_color" | "role"> & { primary_color: string | null };
 
-// Every org that exists, newest last. Despite the name this is not yet scoped to a viewer:
-// there is no sign-in on this route and no memberships table, so there is no "my orgs" to
-// filter down to. Once auth lands this joins memberships and takes the user id.
+// The dashboard shows all organizations, but only members get a role and can invite others.
 export async function getUserOrgs(): Promise<OrgsResult> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -31,10 +30,46 @@ export async function getUserOrgs(): Promise<OrgsResult> {
     return { orgs: [], isPlaceholder: false, error: error.message };
   }
 
-  const orgs = (data ?? []).map((row) => ({
+  const orgs: Org[] = (data ?? []).map((row) => ({
     ...row,
     primary_color: row.primary_color ?? DEFAULT_ORG_COLOR,
   }));
+
+  const sessionClient = await createSessionClient();
+  const { data: { user }, error: authError } = await sessionClient.auth.getUser();
+  if (authError) {
+    console.error("[getUserOrgs] could not check signed-in user:", authError.message);
+    return { orgs: [], isPlaceholder: false, error: authError.message };
+  }
+
+  if (user) {
+    const { data: person, error: personError } = await supabase
+      .from("people")
+      .select("id")
+      .eq("auth_id", user.id)
+      .maybeSingle();
+
+    if (personError) {
+      console.error("[getUserOrgs] could not load user profile:", personError.message);
+      return { orgs: [], isPlaceholder: false, error: personError.message };
+    }
+
+    if (person) {
+      const { data: memberships, error: membershipError } = await supabase
+        .from("memberships")
+        .select("org_id, role")
+        .eq("person_id", person.id)
+        .returns<{ org_id: number; role: "ADMIN" | "MEMBER" }[]>();
+
+      if (membershipError) {
+        console.error("[getUserOrgs] could not load memberships:", membershipError.message);
+        return { orgs: [], isPlaceholder: false, error: membershipError.message };
+      }
+
+      const roles = new Map((memberships ?? []).map(({ org_id, role }) => [org_id, role]));
+      for (const org of orgs) org.role = roles.get(org.id);
+    }
+  }
 
   // Nothing created yet: show the demo clubs so the dashboard isn't a blank page. They are
   // only ever a stand-in for an empty table — a query that *failed* returns above, and a
