@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { Org } from "@/app/Layer3/orgs";
 
 type View = "admin" | "member";
@@ -14,26 +15,32 @@ export default function OrgViews({ org }: { org: Org }) {
       <header style={headerStyle}>
         <h1 style={{ margin: 0, fontSize: "40px" }}>{org.name}</h1>
 
-        {/* Only admins get the toggle */}
+        {/* Only admins get the toggle and settings */}
         {isAdmin && (
-          <div role="tablist" aria-label="Page view" style={toggleStyle}>
-            <ToggleButton active={view === "admin"} onClick={() => setView("admin")}>
-              Admin
-            </ToggleButton>
-            <ToggleButton active={view === "member"} onClick={() => setView("member")}>
-              Member preview
-            </ToggleButton>
+          <div style={headerActionsStyle}>
+            <div role="tablist" aria-label="Page view" style={toggleStyle}>
+              <ToggleButton active={view === "admin"} onClick={() => setView("admin")}>
+                Admin
+              </ToggleButton>
+              <ToggleButton active={view === "member"} onClick={() => setView("member")}>
+                Member preview
+              </ToggleButton>
+            </div>
+            <Link href={`/orgs/${org.slug}/settings`} style={settingsButtonStyle}>
+              <GearIcon />
+              Settings
+            </Link>
           </div>
         )}
       </header>
 
-      {view === "admin" ? <AdminView /> : <MemberView org={org} preview={isAdmin} />}
+      {view === "admin" ? <AdminView org={org} /> : <MemberView org={org} preview={isAdmin} />}
     </div>
   );
 }
 
 /* ---------- Admin placeholder ---------- */
-function AdminView() {
+function AdminView({ org }: { org: Org }) {
   return (
     <>
       <div style={gridStyle}>
@@ -43,7 +50,12 @@ function AdminView() {
       </div>
       <Card title="Manage members">Invite people, change roles, remove members. (Coming soon)</Card>
       <Card title="Events">Create events and track attendance. (Coming soon)</Card>
-      <Card title="Settings">Points, strikes, logo, and colors. (Coming soon)</Card>
+      <Card title="Settings">
+        Logo, colors, points, strikes, and committees.{" "}
+        <Link href={`/orgs/${org.slug}/settings`} style={{ color: "black", fontWeight: 600 }}>
+          Open settings
+        </Link>
+      </Card>
     </>
   );
 }
@@ -89,6 +101,13 @@ function ToggleButton({ active, onClick, children }: { active: boolean; onClick:
   );
 }
 
+const GearIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+  </svg>
+);
+
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section style={cardStyle}>
@@ -107,8 +126,28 @@ const headerStyle: React.CSSProperties = {
   marginBottom: "24px",
 };
 
-const toggleStyle: React.CSSProperties = {
+const headerActionsStyle: React.CSSProperties = {
   marginLeft: "auto",
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: "12px",
+};
+
+const settingsButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  padding: "8px 18px",
+  fontWeight: 600,
+  color: "black",
+  background: "white",
+  border: "2px solid black",
+  borderRadius: "999px",
+  textDecoration: "none",
+};
+
+const toggleStyle: React.CSSProperties = {
   display: "flex",
   border: "2px solid black",
   borderRadius: "999px",

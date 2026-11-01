@@ -23,7 +23,8 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
       gap: "16px",
       boxSizing: "border-box",
       fontFamily: "Roboto, sans-serif",
-      background: `linear-gradient(135deg, ${org.primary_color}55, #FBFBF9)`,
+      // Primary fading into the secondary color (from the org's settings), or off-white if none is set.
+      background: `linear-gradient(135deg, ${org.primary_color}55, ${org.secondary_color ? `${org.secondary_color}55` : "#FBFBF9"})`,
       position: "relative",
     }}>
       <OrgViews org={org} />
