@@ -20,8 +20,8 @@ export default function Layer2Page() {
         flexDirection: "column",
         gap: "16px",
       }}>
-        <Link href="/Layer1" style={{ color: "black", textDecoration: "none" }}>
-          Layer 1
+        <Link href="/Layer3" style={{ color: "black", textDecoration: "none" }}>
+          Dashboard
         </Link>
         <span style={{ fontWeight: "700", textDecoration: "underline", textUnderlineOffset: "6px" }}>
           Layer 2

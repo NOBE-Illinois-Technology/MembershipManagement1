@@ -31,7 +31,7 @@ function ConfirmContent() {
       return;
     }
 
-    const destination = next ?? (type === 'recovery' || type === 'email' ? '/auth/reset-password' : '/users/login');
+    const destination = next ?? (type === 'recovery' || type === 'email' ? '/auth/reset-password' : '/Layer3');
     router.replace(destination);
   }
 

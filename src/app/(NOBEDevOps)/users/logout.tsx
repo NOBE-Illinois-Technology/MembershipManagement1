@@ -9,7 +9,7 @@ export default function LogoutButton() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    router.replace("/users/login"); // send back to login
+    router.replace("/PortalLoginPage"); // signing out of NOBE signs out of the whole portal
   }
 
   return (

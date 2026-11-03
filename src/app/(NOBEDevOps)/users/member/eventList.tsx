@@ -7,7 +7,7 @@ import { createClient } from '@/app/(NOBEDevOps)/utils/supabase/client';
 
 import { useAuth } from '../authprovider';
 import { getMemberStrikes, updateMemberProfile } from './actions';
-import LogoutButton from '../login/logout';
+import LogoutButton from '../logout';
 
 interface Event {
   id: string;

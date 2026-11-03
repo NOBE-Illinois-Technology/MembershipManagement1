@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/app/(NOBEDevOps)/utils/supabase/server";
 import { createAdminClient } from "@/app/(NOBEDevOps)/utils/supabase/admin";
 import { sendEmail } from "@/app/(NOBEDevOps)/utils/sendEmail";
+import { addLoginToOrg, getOrgRole, NOBE_SLUG } from "@/lib/membership";
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +16,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "You must be logged in to populate the database." },
         { status: 401 }
+      );
+    }
+
+    // Everyone imported becomes a NOBE member, so only NOBE admins may import.
+    if ((await getOrgRole(user.id, NOBE_SLUG)) !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Unauthorized. Admin privileges required." },
+        { status: 403 }
       );
     }
 
@@ -252,6 +261,8 @@ export async function POST(request: Request) {
           .insert({ ...person, auth_id: authId, role: "MEMBER" });
         if (insertError) throw insertError;
       }
+
+      await addLoginToOrg(authId, NOBE_SLUG);
 
       // Send the branded invite email through our own GAS pipeline
       try {

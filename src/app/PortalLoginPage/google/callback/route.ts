@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/app/(NOBEDevOps)/utils/supabase/server';
+import { safeNext } from '../../safeNext';
 
-function getSafeNextPath(value: string | null) {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/Layer1";
-}
-
-function loginRedirect(request: NextRequest, next: string | null, error?: string) {
-  const url = new URL(error ? '/PortalLoginPage' : getSafeNextPath(next), request.url);
-  if (error && next) url.searchParams.set("next", getSafeNextPath(next));
+// Success goes to ?next (the page that asked for sign-in) or the dashboard, which also creates
+// the person's `people` row on first Google sign-in.
+function loginRedirect(request: NextRequest, error?: string) {
+  const url = new URL(
+    error ? '/PortalLoginPage' : safeNext(request.nextUrl.searchParams.get('next')),
+    request.url
+  );
   if (error) url.searchParams.set('google_error', error);
   return NextResponse.redirect(url);
 }

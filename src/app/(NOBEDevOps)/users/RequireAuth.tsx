@@ -15,17 +15,23 @@ export default function RequireAuth({ children, requireAdmin = false }: Props) {
 
   useEffect(() => {
     if (loading) return;
-    if (user && !profile) return; // Still resolving profile from people table
-    if (!user && !profile) {
-      router.replace('/users/login');
+    if (!user) {
+      // One portal login for every org; come back here afterwards.
+      const here = window.location.pathname + window.location.search;
+      router.replace(`/PortalLoginPage?next=${encodeURIComponent(here)}`);
       return;
     }
-    if (requireAdmin && profile?.role !== 'ADMIN') {
+    if (!profile) {
+      // Signed in, but not a NOBE member (profile comes from memberships).
+      router.replace('/Layer3');
+      return;
+    }
+    if (requireAdmin && profile.role !== 'ADMIN') {
       router.replace('/users/member');
     }
   }, [loading, profile, user, requireAdmin, router]);
 
-  if (loading || (user && !profile)) {
+  if (loading) {
     return (
       <div className="app-shell">
         <div className="page-frame">

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/app/(NOBEDevOps)/utils/supabase/server";
+import { getOrgRole, NOBE_SLUG } from "@/lib/membership";
 import ExcelJS from "exceljs";
 
 export async function GET() {
@@ -14,14 +15,8 @@ export async function GET() {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    // Verify Admin privileges
-    const { data: userProfile, error: profileError } = await supabase
-      .from("people")
-      .select("role")
-      .eq("auth_id", user.id)
-      .single();
-
-    if (profileError || !userProfile || userProfile.role !== "ADMIN") {
+    // Verify NOBE admin privileges (role lives on memberships)
+    if ((await getOrgRole(user.id, NOBE_SLUG)) !== "ADMIN") {
       return new Response("Forbidden", { status: 403 });
     }
 

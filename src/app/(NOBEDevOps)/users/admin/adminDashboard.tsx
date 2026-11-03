@@ -125,7 +125,7 @@ export default function AdminDashboard({
     } catch (e) {
       console.error("Sign out failed", e);
     }
-    router.replace("/users/login");
+    router.replace("/PortalLoginPage");
   }
 
   // UI states for interactive features
