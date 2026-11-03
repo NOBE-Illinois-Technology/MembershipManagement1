@@ -137,6 +137,11 @@ export default function OrgDashboard({
                   </span>
                 </div>
 
+                <InviteButton
+                  org={org}
+                  disabled={isPlaceholder || org.role !== "ADMIN"}
+                />
+
                 <button
                   type="button"
                   aria-label={`Options for ${org.name}`}
@@ -163,6 +168,149 @@ export default function OrgDashboard({
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function InviteButton({ org, disabled }: { org: Org; disabled: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  async function createInvite() {
+    setCreating(true);
+    setMessage(null);
+    setOpen(true);
+
+    try {
+      const response = await fetch(`/api/orgs/${org.id}/invite`, { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Could not create an invite link.");
+
+      setInviteUrl(result.inviteUrl);
+      setInviteToken(result.token);
+      try {
+        await navigator.clipboard.writeText(result.inviteUrl);
+        setMessage("Invite link copied. It can be reused and does not expire.");
+      } catch {
+        setMessage("Invite link created. Copy it below; it can be reused and does not expire.");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not create an invite link.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function sendInviteEmail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!inviteToken) return;
+    setSending(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`/api/orgs/${org.id}/invite/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, token: inviteToken }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Could not send invite email.");
+      setMessage(`Invite email sent to ${email.trim()}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not send invite email.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: "0 16px 14px" }}>
+      <button
+        type="button"
+        disabled={disabled || creating}
+        onClick={(event) => {
+          event.stopPropagation();
+          void createInvite();
+        }}
+        title={disabled ? "Only organization admins can invite" : undefined}
+        style={{
+          padding: "8px 14px",
+          border: `1px solid ${org.primary_color}`,
+          borderRadius: "6px",
+          color: disabled ? "#6B7780" : "#202a24",
+          background: disabled ? "#f2f4f3" : "white",
+          font: "inherit",
+          fontSize: "14px",
+          fontWeight: 600,
+          cursor: disabled || creating ? "not-allowed" : "pointer",
+        }}
+      >
+        {creating ? "Creating link…" : "Invite"}
+      </button>
+      {open && (
+        <div
+          role="presentation"
+          onClick={() => setOpen(false)}
+          style={inviteOverlayStyle}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`invite-title-${org.id}`}
+            onClick={(event) => event.stopPropagation()}
+            style={inviteDialogStyle}
+          >
+            <button type="button" aria-label="Close invite menu" onClick={() => setOpen(false)} style={inviteCloseStyle}>
+              ×
+            </button>
+            <h2 id={`invite-title-${org.id}`} style={{ margin: "0 32px 8px 0", fontSize: "20px" }}>
+              Invite to {org.name}
+            </h2>
+            <p style={{ margin: "0 0 16px", color: "#5d6861", fontSize: "14px" }}>
+              {creating ? "Creating a reusable invite link…" : "Send this reusable invite link by email or copy it to share."}
+            </p>
+            {inviteUrl && (
+              <input
+                aria-label={`Invite link for ${org.name}`}
+                readOnly
+                value={inviteUrl}
+                onFocus={(event) => event.currentTarget.select()}
+                style={inviteUrlStyle}
+              />
+            )}
+            {inviteToken && (
+              <form onSubmit={sendInviteEmail} style={{ display: "grid", gap: "10px", marginTop: "16px" }}>
+                <label htmlFor={`invite-email-${org.id}`} style={{ fontSize: "14px", fontWeight: 600 }}>
+                  Recipient email
+                </label>
+                <input
+                  id={`invite-email-${org.id}`}
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="name@example.com"
+                  style={inviteUrlStyle}
+                />
+                <button type="submit" disabled={sending} style={sendInviteStyle}>
+                  {sending ? "Sending…" : "Send invite email"}
+                </button>
+              </form>
+            )}
+            {message && (
+              <p role="status" style={{ margin: "12px 0 0", fontSize: "13px", color: "#2D3B45", overflowWrap: "anywhere" }}>
+                {message}
+              </p>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }
@@ -377,6 +525,62 @@ const rolePillStyle: React.CSSProperties = {
   borderRadius: "999px",
   fontSize: "12px",
   fontWeight: 600,
+};
+
+const inviteUrlStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "6px",
+  border: "1px solid #C7CDD1",
+  borderRadius: "4px",
+  color: "#2D3B45",
+  font: "inherit",
+  fontSize: "12px",
+};
+
+const inviteOverlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 100,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "20px",
+  background: "rgba(16, 35, 25, 0.45)",
+};
+
+const inviteDialogStyle: React.CSSProperties = {
+  position: "relative",
+  width: "min(100%, 440px)",
+  padding: "24px",
+  borderRadius: "12px",
+  background: "white",
+  color: "#202a24",
+  boxShadow: "0 12px 36px rgba(0, 0, 0, 0.2)",
+};
+
+const inviteCloseStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "12px",
+  right: "12px",
+  width: "32px",
+  height: "32px",
+  border: "none",
+  borderRadius: "50%",
+  background: "#f2f4f3",
+  color: "#202a24",
+  fontSize: "22px",
+  cursor: "pointer",
+};
+
+const sendInviteStyle: React.CSSProperties = {
+  padding: "11px 16px",
+  border: 0,
+  borderRadius: "8px",
+  color: "#102319",
+  background: "#93E9BE",
+  font: "inherit",
+  fontWeight: 700,
+  cursor: "pointer",
 };
 
 const kebabStyle: React.CSSProperties = {

@@ -19,3 +19,7 @@ Use the Supabase-provided callback URL (`https://<project-ref>.supabase.co/auth/
 ### Supabase `people` table:
 
 The application uses the lowercase `public.people` table. Apply the SQL in `supabase/migrations/20261011213800_fix_people_auth_trigger.sql` to your Supabase project (for example, in the Supabase SQL Editor) so the `auth.users` trigger writes to the existing table when accounts are created.
+
+### Organization invites:
+
+Organization invites use the existing `public.memberships` table (with a unique constraint on `(person_id, org_id)`) and `public.people.auth_id` to associate signed-in accounts with memberships. Apply `supabase/migrations/20261029200000_org_invites.sql` in the Supabase SQL Editor after those tables exist. If that migration was already applied, also apply `supabase/migrations/20261029222000_fix_org_invite_accept_ambiguity.sql` and `supabase/migrations/20261101220000_reusable_admin_org_invites.sql`. Organization admins can create reusable invite links with no expiration; accepting a link requires signing in and adds the account as a `MEMBER`. To email an invite from the dashboard, configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL` with a verified sender address in Resend.

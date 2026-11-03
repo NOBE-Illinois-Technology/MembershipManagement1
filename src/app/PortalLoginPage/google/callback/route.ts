@@ -15,13 +15,14 @@ function loginRedirect(request: NextRequest, error?: string) {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+  const next = searchParams.get("next");
   if (searchParams.has('error')) {
-    return loginRedirect(request, 'oauth');
+    return loginRedirect(request, next, 'oauth');
   }
 
   const code = searchParams.get('code');
   if (!code) {
-    return loginRedirect(request, 'oauth');
+    return loginRedirect(request, next, 'oauth');
   }
 
   try {
@@ -30,12 +31,12 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Google OAuth code exchange failed:', error.message);
-      return loginRedirect(request, 'oauth');
+      return loginRedirect(request, next, 'oauth');
     }
 
-    return loginRedirect(request);
+    return loginRedirect(request, next);
   } catch (error) {
     console.error('Google OAuth callback failed:', error);
-    return loginRedirect(request, 'oauth');
+    return loginRedirect(request, next, 'oauth');
   }
 }

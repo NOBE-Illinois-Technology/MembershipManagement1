@@ -1,0 +1,236 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Validate organization invite changes",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"lint",
+				"&&",
+				"npx",
+				"tsc",
+				"--noEmit"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Verify invite feature",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"lint"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			]
+		},
+		{
+			"label": "Type-check invite feature",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsc",
+				"--noEmit"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Build organization invites",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check invite changes",
+			"type": "shell",
+			"command": "git diff --check && git status --short",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Lint invite implementation",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"eslint",
+				"src/app/Layer3/getUserOrgs.ts",
+				"src/app/Layer3/OrgDashboard.tsx",
+				"src/app/api/orgs/[orgId]/invite/route.ts",
+				"src/app/api/org-invites/accept/route.ts",
+				"src/app/org-invite/[token]/page.tsx",
+				"src/app/org-invite/[token]/InviteAcceptance.tsx",
+				"src/app/PortalLoginPage/page.tsx",
+				"src/app/PortalLoginPage/create-account/page.tsx",
+				"src/app/PortalLoginPage/google/callback/route.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			]
+		},
+		{
+			"label": "Verify invite SQL correction",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"eslint",
+				"src/app/api/org-invites/accept/route.ts",
+				"src/app/Layer3/getUserOrgs.ts",
+				"src/app/Layer3/OrgDashboard.tsx"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			]
+		},
+		{
+			"label": "Validate invite redirect",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"eslint",
+				"src/app/org-invite/[token]/InviteAcceptance.tsx"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			]
+		},
+		{
+			"label": "Lint invite access changes",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"eslint",
+				"src/app/api/orgs/[orgId]/invite/route.ts",
+				"src/app/api/org-invites/accept/route.ts",
+				"src/app/Layer3/OrgDashboard.tsx"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			]
+		},
+		{
+			"label": "Type-check reusable invites",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsc",
+				"--noEmit"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Check invite diff formatting",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"diff",
+				"--check"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect README diff",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"diff",
+				"--",
+				"README.md"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect README line ending",
+			"type": "shell",
+			"command": "python3",
+			"args": [
+				"-c",
+				"from pathlib import Path; print(repr(Path('README.md').read_bytes().splitlines(keepends=True)[23]))"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Read README raw line",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"-e",
+				"const fs=require('fs'); console.log(JSON.stringify(fs.readFileSync('README.md').toString().split(/\\n/)[23]))"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Lint invite email changes",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"eslint",
+				"src/app/Layer3/OrgDashboard.tsx",
+				"src/app/api/orgs/[orgId]/invite/route.ts",
+				"src/app/api/orgs/[orgId]/invite/email/route.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			]
+		},
+		{
+			"label": "Typecheck invite email",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsc",
+				"--noEmit"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Check invite email diff",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"diff",
+				"--check"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Production build invite email",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

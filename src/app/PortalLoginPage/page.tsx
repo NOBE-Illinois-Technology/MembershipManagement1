@@ -15,6 +15,11 @@ const inputStyle = {
   outlineColor: '#31845a',
 };
 
+function getSafeNextPath() {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next?.startsWith("/") && !next.startsWith("//") ? next : "/Layer1";
+}
+
 export default function PortalLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
