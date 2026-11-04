@@ -28,13 +28,13 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     description: "Monthly calendar view with upcoming organization events and meetings.",
     targetView: "both",
     colSpan: 2,
-    getParamSummary: () => "Blank parameters for custom event scheduling",
+    getParamSummary: () => "Event schedule parameters",
   },
   {
     id: "points",
     title: "Points & Attendance",
     badge: "Widget 2",
-    description: "Tracks progress towards total point requirement and category breakdowns.",
+    description: "Point breakdown and event attendance requirement tracker.",
     targetView: "both",
     colSpan: 1,
     getParamSummary: (settings) => {
@@ -47,7 +47,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     id: "profile",
     title: "Member Profile View",
     badge: "Widget 3",
-    description: "Displays member identity, assigned committees, and membership standing.",
+    description: "Member profile identity, assigned committees, and membership standing.",
     targetView: "both",
     colSpan: 1,
     getParamSummary: (settings) => {
@@ -73,7 +73,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     id: "quick-stats",
     title: "Admin Overview",
     badge: "Admin",
-    description: "Key organization indicators: membership count, active categories, and active events.",
+    description: "Key organization indicators and overview metrics.",
     targetView: "admin",
     colSpan: 2,
     getParamSummary: (settings) =>
@@ -83,7 +83,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     id: "manage-members",
     title: "Member Management",
     badge: "Admin",
-    description: "Quick member roster, role administration, and organization invite link generation.",
+    description: "Member roster, role administration, and organization invite link generation.",
     targetView: "admin",
     colSpan: 1,
     getParamSummary: () => "Invite & role management",
@@ -109,23 +109,14 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
   },
 ];
 
-export const DEFAULT_ADMIN_WIDGETS: WidgetId[] = [
-  "quick-stats",
-  "calendar",
-  "manage-members",
-  "pending-absences",
-  "points",
-  "strikes",
-  "org-info",
-];
+// No start template by default — users build their dashboard via drag & drop
+export const DEFAULT_ADMIN_WIDGETS: WidgetId[] = [];
+export const DEFAULT_MEMBER_WIDGETS: WidgetId[] = [];
 
-export const DEFAULT_MEMBER_WIDGETS: WidgetId[] = [
-  "profile",
-  "points",
-  "strikes",
-  "calendar",
-];
-
+/**
+ * Populates the list of available widgets based on Nadia's org settings parameters
+ * and the active page view (Admin vs Member).
+ */
 export function getAvailableWidgets(
   settings: OrgSettings | null | undefined,
   view: "admin" | "member"
