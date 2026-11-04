@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/app/(NOBEDevOps)/utils/supabase/admin";
 import { createClient as createSessionClient } from "@/app/(NOBEDevOps)/utils/supabase/server";
+import { ensurePerson } from "@/lib/membership";
 
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -26,24 +27,18 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "Sign in to accept this invite." }, { status: 401 });
 
     const admin = createAdminClient();
-    const { data: person, error: personError } = await admin
-      .from("people")
-      .select("id")
-      .eq("auth_id", user.id)
-      .maybeSingle();
-
-    if (personError) {
-      console.error("[POST /api/org-invites/accept] profile lookup failed:", personError);
+    let personId: number;
+    try {
+      personId = await ensurePerson(user);
+    } catch (personError) {
+      console.error("[POST /api/org-invites/accept] profile ensure failed:", personError);
       return NextResponse.json({ error: "Could not load your account profile." }, { status: 500 });
-    }
-    if (!person) {
-      return NextResponse.json({ error: "Your account is not linked to an organization profile." }, { status: 403 });
     }
 
     const tokenHash = createHash("sha256").update(token).digest("hex");
     const { data, error } = await admin.rpc("accept_org_invite", {
       p_token_hash: tokenHash,
-      p_person_id: person.id,
+      p_person_id: personId,
     });
 
     if (error) {
