@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUserOrgs } from "../../Layer3/getUserOrgs";
 import OrgViews from "./OrgViews";
+import { loadOrgSettings } from "@/lib/orgSettingsStore";
+import type { OrgSettings } from "@/lib/orgSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,13 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
   const { orgs } = await getUserOrgs(`/orgs/${slug}`);
   const org = orgs.find((o) => o.slug === slug);
   if (!org) notFound();
+
+  let settings: OrgSettings | null = null;
+  try {
+    settings = await loadOrgSettings(slug);
+  } catch (err) {
+    console.warn("[OrgPage] could not load org settings:", err);
+  }
 
   return (
     <div style={{
@@ -27,7 +36,7 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
       background: `linear-gradient(135deg, ${org.primary_color}55, ${org.secondary_color ? `${org.secondary_color}55` : "#FBFBF9"})`,
       position: "relative",
     }}>
-      <OrgViews org={org} />
+      <OrgViews org={org} settings={settings} />
 
       <Link href="/Layer3" style={{
         ...pillStyle,
