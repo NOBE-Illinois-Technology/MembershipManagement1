@@ -19,11 +19,9 @@ function escapeHtml(value: string) {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ orgId: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const { orgId: rawOrgId } = await params;
-  const orgId = Number(rawOrgId);
-  if (!Number.isSafeInteger(orgId) || orgId < 1) return fail("Invalid organization.");
+  const { slug } = await params;
 
   let body: unknown;
   try {
@@ -43,7 +41,7 @@ export async function POST(
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
   if (!apiKey || !from) {
-    console.error("[POST /api/orgs/[orgId]/invite/email] Resend is not configured.");
+    console.error("[POST /api/orgs/[slug]/invite/email] Resend is not configured.");
     return fail("Email sending is not configured. Set RESEND_API_KEY and RESEND_FROM_EMAIL.", 503);
   }
 
@@ -51,12 +49,29 @@ export async function POST(
     const sessionClient = await createSessionClient();
     const { data: { user }, error: authError } = await sessionClient.auth.getUser();
     if (authError) {
-      console.error("[POST /api/orgs/[orgId]/invite/email] auth lookup failed:", authError.message);
+      console.error("[POST /api/orgs/[slug]/invite/email] auth lookup failed:", authError.message);
       return fail("Could not verify your sign-in. Please try again.", 500);
     }
     if (!user) return fail("Sign in to send an invite email.", 401);
 
     const admin = createAdminClient();
+
+    let orgId = Number(slug);
+    if (!Number.isSafeInteger(orgId) || orgId < 1) {
+      const { data: orgRecord, error: orgLookupError } = await admin
+        .from("organizations")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (orgLookupError) {
+        console.error("[POST /api/orgs/[slug]/invite/email] org lookup failed:", orgLookupError);
+        return fail("Could not verify organization.", 500);
+      }
+      if (!orgRecord) return fail("Invalid organization.");
+      orgId = orgRecord.id;
+    }
+
     const { data: person, error: personError } = await admin
       .from("people")
       .select("id")
@@ -64,7 +79,7 @@ export async function POST(
       .maybeSingle();
 
     if (personError) {
-      console.error("[POST /api/orgs/[orgId]/invite/email] profile lookup failed:", personError);
+      console.error("[POST /api/orgs/[slug]/invite/email] profile lookup failed:", personError);
       return fail("Could not verify your organization membership.", 500);
     }
     if (!person) return fail("Your account is not linked to an organization profile.", 403);
@@ -77,7 +92,7 @@ export async function POST(
       .maybeSingle();
 
     if (membershipError) {
-      console.error("[POST /api/orgs/[orgId]/invite/email] membership lookup failed:", membershipError);
+      console.error("[POST /api/orgs/[slug]/invite/email] membership lookup failed:", membershipError);
       return fail("Could not verify your organization membership.", 500);
     }
     if (membership?.role !== "ADMIN") return fail("Only organization admins can send invite emails.", 403);
@@ -98,7 +113,7 @@ export async function POST(
     ]);
 
     if (inviteError || orgError) {
-      console.error("[POST /api/orgs/[orgId]/invite/email] invite or organization lookup failed:", inviteError ?? orgError);
+      console.error("[POST /api/orgs/[slug]/invite/email] invite or organization lookup failed:", inviteError ?? orgError);
       return fail("Could not verify the invite link.", 500);
     }
     if (!invite || !org) return fail("Invite link not found for this organization.", 404);
@@ -117,13 +132,13 @@ export async function POST(
     });
 
     if (sendError) {
-      console.error("[POST /api/orgs/[orgId]/invite/email] Resend failed:", sendError);
+      console.error("[POST /api/orgs/[slug]/invite/email] Resend failed:", sendError);
       return fail("Resend could not send the invite email. Check the recipient and sender configuration.", 502);
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[POST /api/orgs/[orgId]/invite/email] request failed:", error);
+    console.error("[POST /api/orgs/[slug]/invite/email] request failed:", error);
     return fail("Could not send the invite email.", 500);
   }
 }

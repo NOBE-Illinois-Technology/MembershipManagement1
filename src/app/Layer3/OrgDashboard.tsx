@@ -139,7 +139,7 @@ export default function OrgDashboard({
 
                 <InviteButton
                   org={org}
-                  disabled={isPlaceholder || org.role !== "ADMIN"}
+                  disabled={org.role !== "ADMIN"}
                 />
 
                 <button

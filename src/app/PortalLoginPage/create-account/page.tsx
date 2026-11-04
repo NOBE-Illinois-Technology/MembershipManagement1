@@ -5,6 +5,7 @@ import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/app/(NOBEDevOps)/utils/supabase/client';
+import { safeNext } from '../safeNext';
 
 const inputStyle = {
   width: '100%',
@@ -23,7 +24,7 @@ const labelStyle = {
 
 function getSafeNextPath() {
   const next = new URLSearchParams(window.location.search).get("next");
-  return next?.startsWith("/") && !next.startsWith("//") ? next : "/Layer1";
+  return safeNext(next);
 }
 
 export default function CreateAccountPage() {
@@ -114,7 +115,7 @@ export default function CreateAccountPage() {
         return;
       }
 
-      router.replace('/Layer3');
+      router.replace(getSafeNextPath());
       router.refresh();
     } catch (signupError) {
       console.error('Account creation failed:', signupError);

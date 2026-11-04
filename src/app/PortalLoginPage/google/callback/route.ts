@@ -4,11 +4,11 @@ import { safeNext } from '../../safeNext';
 
 // Success goes to ?next (the page that asked for sign-in) or the dashboard, which also creates
 // the person's `people` row on first Google sign-in.
-function loginRedirect(request: NextRequest, error?: string) {
-  const url = new URL(
-    error ? '/PortalLoginPage' : safeNext(request.nextUrl.searchParams.get('next')),
-    request.url
-  );
+function loginRedirect(request: NextRequest, next?: string | null, error?: string) {
+  const destination = error ? '/PortalLoginPage' : safeNext(next ?? request.nextUrl.searchParams.get('next'));
+  const url = new URL(destination, request.url);
+  const targetNext = safeNext(next ?? request.nextUrl.searchParams.get('next'));
+  if (error && targetNext) url.searchParams.set('next', targetNext);
   if (error) url.searchParams.set('google_error', error);
   return NextResponse.redirect(url);
 }

@@ -15,11 +15,6 @@ const inputStyle = {
   outlineColor: '#31845a',
 };
 
-function getSafeNextPath() {
-  const next = new URLSearchParams(window.location.search).get("next");
-  return next?.startsWith("/") && !next.startsWith("//") ? next : "/Layer1";
-}
-
 export default function PortalLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -307,7 +302,10 @@ export default function PortalLoginPage() {
 
             <p style={{ margin: '20px 0 0', color: '#5d6861' }}>
               Need an account?{' '}
-              <Link href="/PortalLoginPage/create-account" style={{ color: '#246b46', fontWeight: 700 }}>
+              <Link
+                href={next !== '/Layer3' ? `/PortalLoginPage/create-account?next=${encodeURIComponent(next)}` : "/PortalLoginPage/create-account"}
+                style={{ color: '#246b46', fontWeight: 700 }}
+              >
                 Create account
               </Link>
             </p>
