@@ -1,6 +1,7 @@
 // Org shape for the Layer 3 canvas, matching the `organizations` table in Supabase.
-// Columns: id (bigint identity), name, slug, logo_url, primary_color,
-// allowed_email_domain, plan (default 'free'), status (default 'active'), created_at.
+// Columns: id (bigint identity), name, slug, logo_url, primary_color, secondary_color,
+// allowed_email_domain, plan (default 'free'), status (default 'active'), created_at,
+// plus the settings columns read by src/lib/orgSettingsStore.ts.
 
 export type Org = {
   id: number;
@@ -8,6 +9,8 @@ export type Org = {
   slug: string;
   logo_url: string | null;
   primary_color: string;
+  // Optional; set on the org's settings page.
+  secondary_color: string | null;
   created_at: string;
   // The signed-in user's role in this org, from `memberships`.
   role: "ADMIN" | "MEMBER";

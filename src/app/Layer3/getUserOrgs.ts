@@ -5,7 +5,7 @@ import { DEFAULT_ORG_COLOR, type Org } from "./orgs";
 
 // Every column the org cards need. Shared with the create-org route so a new org
 // comes back in exactly the shape the dashboard renders.
-export const ORG_SELECT = "id, name, slug, logo_url, primary_color, created_at";
+export const ORG_SELECT = "id, name, slug, logo_url, primary_color, secondary_color, created_at";
 
 export type OrgsResult = {
   orgs: Org[];
