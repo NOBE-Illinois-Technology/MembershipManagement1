@@ -12,8 +12,24 @@ import {
   type WidgetId,
 } from "@/lib/widgets";
 import WidgetTemplate from "./WidgetTemplate";
+import CalendarWidget from "./widgets/CalendarWidget";
+import PointsWidget from "./widgets/PointsWidget";
 
 type View = "admin" | "member";
+
+// Content for the widgets that have been built; anything else renders WidgetTemplate's empty slot.
+// Events and member points aren't stored per org yet, so both widgets get empty data for now.
+function renderWidgetContent(widgetId: WidgetId, org: Org, settings?: OrgSettings | null) {
+  const accentColor = settings?.primary_color ?? org.primary_color;
+  switch (widgetId) {
+    case "calendar":
+      return <CalendarWidget events={[]} accentColor={accentColor} />;
+    case "points":
+      return <PointsWidget settings={settings} earnedByCategory={{}} accentColor={accentColor} />;
+    default:
+      return undefined;
+  }
+}
 
 export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSettings | null }) {
   const isAdmin = org.role === "ADMIN";
@@ -308,7 +324,9 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
                         isDropTarget={isDropTarget}
                         isCustomizing={isAdmin}
                         onRemove={() => removeWidget(index)}
-                      />
+                      >
+                        {renderWidgetContent(widgetId, org, settings)}
+                      </WidgetTemplate>
                     </div>
                   );
                 })}
