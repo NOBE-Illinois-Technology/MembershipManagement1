@@ -14,11 +14,12 @@ import {
 import WidgetTemplate from "./WidgetTemplate";
 import CalendarWidget from "./widgets/CalendarWidget";
 import PointsWidget from "./widgets/PointsWidget";
+import ProfileWidget from "./widgets/ProfileWidget";
+import StrikesWidget from "./widgets/StrikesWidget";
 
 type View = "admin" | "member";
 
-// Content for the widgets that have been built; anything else renders WidgetTemplate's empty slot.
-// Events and member points aren't stored per org yet, so both widgets get empty data for now.
+// Events and member-specific data aren't stored per org yet, so those widgets use sample data.
 function renderWidgetContent(widgetId: WidgetId, org: Org, settings?: OrgSettings | null) {
   const accentColor = settings?.primary_color ?? org.primary_color;
   switch (widgetId) {
@@ -26,6 +27,10 @@ function renderWidgetContent(widgetId: WidgetId, org: Org, settings?: OrgSetting
       return <CalendarWidget events={[]} accentColor={accentColor} />;
     case "points":
       return <PointsWidget settings={settings} earnedByCategory={{}} accentColor={accentColor} />;
+    case "profile":
+      return <ProfileWidget accentColor={accentColor} />;
+    case "strikes":
+      return <StrikesWidget settings={settings} accentColor={accentColor} />;
     default:
       return undefined;
   }
