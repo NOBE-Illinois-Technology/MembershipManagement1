@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     const { data: upcomingEvents, error: eventsError } = await supabaseAdmin
       .from("events")
       .select("name, event_type, date")
+      .is("org_id", null)
       .gt("date", now)
       .order("date", { ascending: true });
 

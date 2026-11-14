@@ -15,6 +15,8 @@ type CalendarWidgetProps = {
   events?: OrgEvent[];
   // Org primary color; stands in for NOBE's orange accent.
   accentColor?: string;
+  // When set (admin view), event cards are buttons that call this with the event's id.
+  onEventClick?: (eventId: string) => void;
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -51,7 +53,7 @@ function useHasMounted() {
   return useSyncExternalStore(noopSubscribe, () => true, () => false);
 }
 
-export default function CalendarWidget({ events = [], accentColor = "#3B82F6" }: CalendarWidgetProps) {
+export default function CalendarWidget({ events = [], accentColor = "#3B82F6", onEventClick }: CalendarWidgetProps) {
   const mounted = useHasMounted();
   const [displayMonth, setDisplayMonth] = useState(() => {
     const now = new Date();
@@ -157,10 +159,26 @@ export default function CalendarWidget({ events = [], accentColor = "#3B82F6" }:
                   ) : (
                     dayEvents.slice(0, MAX_EVENTS_PER_DAY).map((event) => {
                       const time = eventTime(event.date);
-                      return (
-                        <div key={event.id} className="calendar-event" title={event.title}>
+                      const body = (
+                        <>
                           {time && <div className="calendar-event-time">{time}</div>}
                           <div className="calendar-event-name">{event.title}</div>
+                        </>
+                      );
+                      // Admins can click an event to edit or delete it.
+                      return onEventClick ? (
+                        <button
+                          key={event.id}
+                          type="button"
+                          className="calendar-event calendar-event-button"
+                          title={`Edit or delete "${event.title}"`}
+                          onClick={() => onEventClick(event.id)}
+                        >
+                          {body}
+                        </button>
+                      ) : (
+                        <div key={event.id} className="calendar-event" title={event.title}>
+                          {body}
                         </div>
                       );
                     })
@@ -343,6 +361,24 @@ export default function CalendarWidget({ events = [], accentColor = "#3B82F6" }:
             color-mix(in srgb, var(--cal-accent) 5%, transparent)
           );
           padding: 5px 7px;
+        }
+        .calendar-event-button {
+          display: block;
+          width: 100%;
+          min-width: 0;
+          text-align: left;
+          font: inherit;
+          color: inherit;
+          cursor: pointer;
+          transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+        .calendar-event-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+        }
+        .calendar-event-button:focus-visible {
+          outline: 2px solid var(--cal-accent);
+          outline-offset: 1px;
         }
         .calendar-event-time {
           color: var(--cal-accent);

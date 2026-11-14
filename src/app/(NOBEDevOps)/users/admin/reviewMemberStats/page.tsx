@@ -23,16 +23,20 @@ export default async function ReviewMemberStats() {
         supabase
             .from("events")
             .select("id, name, date, event_type, points, is_mandatory")
+            .is("org_id", null)
             .order("date", { ascending: true }),
         supabase
             .from("attendance")
-            .select("id, user_id, event_id, timestamp"),
+            .select("id, user_id, event_id, timestamp")
+            .is("org_id", null),
         supabase
             .from("excused_absences")
-            .select("id, user_id, event_id, status, reason, submitted_at"),
+            .select("id, user_id, event_id, status, reason, submitted_at")
+            .is("org_id", null),
         supabase
             .from("strikes")
             .select("id, user_id, event_id, strike_type, reason, status, source, admin_note, created_at, created_by")
+            .is("org_id", null)
             .order("created_at", { ascending: false }),
         supabase
             .from("system_settings")

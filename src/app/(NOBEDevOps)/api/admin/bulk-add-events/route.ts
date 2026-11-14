@@ -150,6 +150,7 @@ export async function POST(request: Request) {
         const { data: existing, error: dupError } = await supabase
           .from("events")
           .select("id, name, date")
+          .is("org_id", null)
           .eq("date", dateISO);
 
         if (dupError) {

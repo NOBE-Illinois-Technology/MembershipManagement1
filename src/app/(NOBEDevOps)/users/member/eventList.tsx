@@ -155,6 +155,7 @@ export default function EventList() {
         const { data, error: fetchError } = await supabase
           .from('events')
           .select('*')
+          .is('org_id', null)
           .order('date', { ascending: false });
 
         if (fetchError) throw fetchError;
@@ -162,7 +163,7 @@ export default function EventList() {
         setLoading(false);
 
         fetch('/api/gcal-club/sync', { method: 'POST' })
-          .then(() => supabase.from('events').select('*').order('date', { ascending: false }))
+          .then(() => supabase.from('events').select('*').is('org_id', null).order('date', { ascending: false }))
           .then(({ data: fresh }) => {
             if (fresh) setNobeEvents(fresh);
           })

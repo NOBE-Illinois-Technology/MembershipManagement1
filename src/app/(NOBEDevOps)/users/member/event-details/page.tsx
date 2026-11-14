@@ -95,7 +95,7 @@ function EventDetailsClient() {
     setLoading(true);
     try {
       const [eventRes, attendanceRes, absenceRes] = await Promise.all([
-        supabase.from("events").select("*").eq("id", eventId).single(),
+        supabase.from("events").select("*").eq("id", eventId).is("org_id", null).single(),
         supabase.from("attendance").select("*").eq("event_id", eventId).eq("user_id", session.user.id).maybeSingle(),
         supabase.from("excused_absences").select("*").eq("event_id", eventId).eq("user_id", session.user.id).maybeSingle(),
       ]);

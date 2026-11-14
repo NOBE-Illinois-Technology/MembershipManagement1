@@ -55,6 +55,7 @@ export async function getMemberStrikes() {
     .from("strikes")
     .select("id, event_id, strike_type, reason, source, status, admin_note, created_at")
     .eq("user_id", user.id)
+    .is("org_id", null)
     .eq("status", "ACTIVE")
     .order("created_at", { ascending: false });
 

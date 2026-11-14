@@ -98,8 +98,8 @@ export default function ViewAllEvents() {
     setLoading(true);
     try {
       const [eventsRes, attendanceRes, peopleRes] = await Promise.all([
-        supabase.from("events").select("*").order("date", { ascending: true }),
-        supabase.from("attendance").select("user_id, event_id"),
+        supabase.from("events").select("*").is("org_id", null).order("date", { ascending: true }),
+        supabase.from("attendance").select("user_id, event_id").is("org_id", null),
         supabase.from("people").select("id, auth_id")
       ]);
 
