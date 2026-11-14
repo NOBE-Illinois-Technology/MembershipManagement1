@@ -85,7 +85,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     badge: "Admin",
     description: "Member roster, role administration, and organization invite link generation.",
     targetView: "admin",
-    colSpan: 1,
+    colSpan: 2,
     getParamSummary: () => "Invite & role management",
   },
   {

@@ -16,8 +16,44 @@ import CalendarWidget from "./widgets/CalendarWidget";
 import PointsWidget from "./widgets/PointsWidget";
 import ProfileWidget from "./widgets/ProfileWidget";
 import StrikesWidget from "./widgets/StrikesWidget";
+import MemberManagementWidget from "./widgets/MemberManagementWidget";
 
 type View = "admin" | "member";
+
+const SAMPLE_MEMBERS = [
+  { id: "1", name: "Risha Bansal", email: "rishab5@illinois.edu", role: "ADMIN", committee: "Technology", major: "CS", year: "2029", college: "Grainger", totalPoints: 6, activeStrikes: 0, joinedAt: "2026-07-01" },
+  { id: "2", name: "Srikriti Mutyala", email: "mutyala3@illinois.edu", role: "ADMIN", committee: "Technology", major: "CS+Statistics", year: "2029", college: "Grainger", totalPoints: 1, activeStrikes: 1, joinedAt: "2026-08-20" },
+  { id: "3", name: "Vinay Nair", email: "vinayn5@illinois.edu", role: "MEMBER", committee: "Technology", totalPoints: 0, activeStrikes: 0, joinedAt: "2026-01-10" },
+  { id: "4", name: "Nadia Shastri", email: "nadiaks2@illinois.edu", role: "MEMBER", committee: "Technology", totalPoints: 0, activeStrikes: 0, joinedAt: "2026-01-11" },
+];
+
+const SAMPLE_EVENTS = [
+  { id: "e1", name: "Semi Formal", date: "2026-11-11", eventType: "social", category: "Social" },
+  { id: "e2", name: "Slime Social", date: "2026-11-10", eventType: "social", category: "Social" },
+  { id: "e3", name: "Investment 101 Workshop", date: "2026-11-05", eventType: "professional", category: "Professional" },
+  { id: "e4", name: "Literary Bookmarks with MBSA", date: "2026-11-03", eventType: "service", category: "Service" },
+];
+
+const SAMPLE_CATEGORIES = [
+  { name: "Professional", mandatory: true },
+  { name: "Social" },
+  { name: "Service" },
+];
+
+const SAMPLE_ATTENDANCE = [
+  // Risha: 3 of 4
+  { memberId: "1", eventId: "e2", checkedInAt: "2026-11-10T17:53:00" },
+  { memberId: "1", eventId: "e3", checkedInAt: "2026-11-05T18:05:00" },
+  { memberId: "1", eventId: "e4", checkedInAt: "2026-11-03T16:30:00" },
+  // Srikriti: 2 of 4
+  { memberId: "2", eventId: "e3", checkedInAt: "2026-11-05T18:02:00" },
+  { memberId: "2", eventId: "e1", checkedInAt: "2026-11-11T20:10:00" },
+  // Vinay: 2 of 4
+  { memberId: "3", eventId: "e1", checkedInAt: "2026-11-11T20:15:00" },
+  { memberId: "3", eventId: "e2", checkedInAt: "2026-11-10T17:48:00" },
+  // Nadia: 1 of 4
+  { memberId: "4", eventId: "e4", checkedInAt: "2026-11-03T16:42:00" },
+];
 
 // Events and member-specific data aren't stored per org yet, so those widgets use sample data.
 function renderWidgetContent(widgetId: WidgetId, org: Org, settings?: OrgSettings | null) {
@@ -31,6 +67,19 @@ function renderWidgetContent(widgetId: WidgetId, org: Org, settings?: OrgSetting
       return <ProfileWidget accentColor={accentColor} />;
     case "strikes":
       return <StrikesWidget settings={settings} accentColor={accentColor} />;
+    case "manage-members":
+      return (
+        <MemberManagementWidget
+          orgName={org.name}
+          members={SAMPLE_MEMBERS}
+          events={SAMPLE_EVENTS}
+          attendance={SAMPLE_ATTENDANCE}
+          categories={settings?.categories?.map((c) => ({ name: c.name, mandatory: c.mandatory }))}
+          accentColor={accentColor}
+          onChangeRole={async (id, role) => console.log("change role", id, role)}
+          onDeactivate={async (id) => console.log("deactivate", id)}
+        />
+      );
     default:
       return undefined;
   }
