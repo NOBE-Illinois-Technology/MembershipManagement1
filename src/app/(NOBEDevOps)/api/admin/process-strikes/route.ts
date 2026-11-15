@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/app/(NOBEDevOps)/utils/supabase/server";
+import { getOrgRole, NOBE_SLUG } from "@/lib/membership";
 
 export async function POST(request: Request) {
   try {
     // Check if this is an automated scheduled Cron Job
     const authHeader = request.headers.get('authorization');
-    const isCronJob = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+    // Only when CRON_SECRET is set: otherwise the header "Bearer undefined" would match.
+    const cronSecret = process.env.CRON_SECRET;
+    const isCronJob = Boolean(cronSecret) && authHeader === `Bearer ${cronSecret}`;
 
     // If it's not a cron job, verify it's an admin user clicking the button
     if (!isCronJob) {
@@ -23,6 +26,14 @@ export async function POST(request: Request) {
           { status: 401 }
         );
       }
+
+      // Only NOBE admins may run it by hand.
+      if ((await getOrgRole(user.id, NOBE_SLUG)) !== "ADMIN") {
+        return NextResponse.json(
+          { error: "Only NOBE admins can process strikes." },
+          { status: 403 }
+        );
+      }
     } else {
         console.log("Process Strikes: Triggered automatically by scheduled Cron.");
     }
@@ -37,6 +48,8 @@ export async function POST(request: Request) {
     const { data: unprocessedEvents, error: eventsError } = await adminClient
       .from("events")
       .select("id, name, check_in_ends_at")
+      // NOBE events only; org dashboard events are processed by /api/orgs/[slug]/strikes/process.
+      .is("org_id", null)
       .eq("is_mandatory", true)
       .eq("strikes_processed", false)
       .lt("check_in_ends_at", now);
@@ -60,10 +73,15 @@ export async function POST(request: Request) {
     for (const event of unprocessedEvents) {
       console.log(`Processing event: ${event.name} (${event.id})`);
       
-      // 2. Get all people
-      const { data: people, error: peopleError } = await adminClient
-        .from("people")
-        .select("auth_id, name, illinois_email, strikes");
+      // 2. Get NOBE's members. Not everyone in `people`: members of other orgs must not get NOBE strikes.
+      const { data: nobeMemberships, error: peopleError } = await adminClient
+        .from("memberships")
+        .select("people!inner(auth_id, name, illinois_email, strikes), organizations!inner(slug)")
+        .eq("organizations.slug", NOBE_SLUG);
+      type NobePerson = { auth_id: string | null; name: string | null; illinois_email: string | null; strikes: number | null };
+      const people = nobeMemberships?.map(
+        (m) => (Array.isArray(m.people) ? m.people[0] : m.people) as unknown as NobePerson
+      );
 
       if (peopleError || !people) {
         console.error("Process Strikes: Failed to fetch people", peopleError);

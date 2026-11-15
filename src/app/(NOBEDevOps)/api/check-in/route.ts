@@ -40,6 +40,8 @@ export async function POST(req: Request) {
       .from("events")
       .select("id, name, points, event_type, check_in_starts_at, check_in_ends_at")
       .eq("qr_code_secret", qr_code_secret)
+      // NOBE events only: this route adds NOBE points, so org dashboard events (org_id set) are ignored.
+      .is("org_id", null)
       .single();
 
     if (eventError || !event) {

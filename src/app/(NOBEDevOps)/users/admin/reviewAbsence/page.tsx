@@ -32,6 +32,7 @@ export default async function ReviewAbsence() {
     supabase
       .from("excused_absences")
       .select("id, user_id, reason, status, submitted_at, admin_response, reviewed_at, email_sent, email_error, image_url")
+      .is("org_id", null)
       .order("submitted_at", { ascending: false }),
     supabase
       .from("people")

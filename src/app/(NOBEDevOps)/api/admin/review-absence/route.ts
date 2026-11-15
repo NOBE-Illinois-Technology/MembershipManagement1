@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/app/(NOBEDevOps)/utils/supabase/server";
+import { getOrgRole, NOBE_SLUG } from "@/lib/membership";
 
 type ReviewPayload = {
   absenceId?: string;
@@ -51,10 +52,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if ((await getOrgRole(user.id, NOBE_SLUG)) !== "ADMIN") {
+      return NextResponse.json({ error: "Only NOBE admins can review absence requests." }, { status: 403 });
+    }
+
     const { data: absence, error: absenceError } = await supabase
       .from("excused_absences")
       .select("id, user_id, event_id, reason, status")
       .eq("id", absenceId)
+      // NOBE absences only; org dashboard absences are reviewed in /api/orgs/[slug]/absences.
+      .is("org_id", null)
       .single();
 
     if (absenceError || !absence) {

@@ -435,7 +435,7 @@ export default function ReviewMemberStatsClient({
         setActionError(null);
         startTransition(async () => {
             try {
-                await deleteMember(selectedMember.id, selectedMember.auth_id, selectedMember.illinois_email);
+                await deleteMember(selectedMember.id);
                 window.location.reload();
             } catch (err) {
                 setActionError(err instanceof Error ? err.message : "Failed to delete member.");

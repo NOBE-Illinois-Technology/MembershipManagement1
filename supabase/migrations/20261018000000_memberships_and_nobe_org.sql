@@ -1,14 +1,3 @@
--- Repurpose `people` as the portal-wide user table and add per-org membership.
---
---   people          who someone is (one row per login, linked by auth_id)
---   memberships     which orgs they belong to, and their role in each org
---   organizations   the orgs themselves (NOBE DevOps is added below)
---
--- Additive only: nothing is renamed or dropped, and people.role is left in place
--- until the NOBE code has moved to reading roles from memberships.
--- Safe to run more than once.
---
--- Run in the Supabase dashboard: SQL Editor -> paste this file -> Run.
 
 begin;
 
@@ -89,11 +78,3 @@ on conflict (person_id, org_id) do nothing;
 
 commit;
 
--- Optional: make someone a NOBE admin (no one in people is ADMIN today).
--- Replace the email, then run this on its own:
---
--- update public.memberships m
--- set role = 'ADMIN'
--- from public.people p, public.organizations o
--- where m.person_id = p.id and m.org_id = o.id
---   and o.slug = 'nobe' and p.illinois_email = 'you@illinois.edu';

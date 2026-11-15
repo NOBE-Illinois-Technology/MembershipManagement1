@@ -4,6 +4,8 @@ import { getUserOrgs } from "../../Layer3/getUserOrgs";
 import OrgViews from "./OrgViews";
 import { loadOrgSettings } from "@/lib/orgSettingsStore";
 import type { OrgSettings } from "@/lib/orgSettings";
+import { createAdminClient } from "@/app/(NOBEDevOps)/utils/supabase/admin";
+import { ORG_EVENT_COLUMNS, type OrgEventRow } from "@/lib/orgEvents";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,17 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
     console.warn("[OrgPage] could not load org settings:", err);
   }
 
+  // The org's own events (events.org_id). getUserOrgs above already confirmed the user is a member.
+  // Empty if the org events migration hasn't been run yet.
+  let events: OrgEventRow[] = [];
+  const { data: eventRows, error: eventsError } = await createAdminClient()
+    .from("events")
+    .select(ORG_EVENT_COLUMNS)
+    .eq("org_id", org.id)
+    .order("date", { ascending: true });
+  if (eventsError) console.warn("[OrgPage] could not load org events:", eventsError.message);
+  else events = (eventRows ?? []) as OrgEventRow[];
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -36,7 +49,7 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
       background: `linear-gradient(135deg, ${org.primary_color}55, ${org.secondary_color ? `${org.secondary_color}55` : "#FBFBF9"})`,
       position: "relative",
     }}>
-      <OrgViews org={org} settings={settings} />
+      <OrgViews org={org} settings={settings} events={events} />
 
       <Link href="/Layer3" style={{
         ...pillStyle,

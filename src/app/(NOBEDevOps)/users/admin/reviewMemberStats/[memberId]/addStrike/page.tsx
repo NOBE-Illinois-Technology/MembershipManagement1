@@ -23,6 +23,7 @@ export default async function AddStrikePage({ params }: AddStrikePageProps) {
         supabase
             .from("events")
             .select("id, name, date")
+            .is("org_id", null)
             .order("date", { ascending: false }),
     ]);
 

@@ -313,6 +313,7 @@ function CreateEventContent() {
           "id, name, event_type, dresscode, points, is_mandatory, date, location, created_at, qr_code_secret, check_in_starts_at, check_in_ends_at, description"
         )
         .eq("id", eventId)
+        .is("org_id", null)
         .single();
 
       if (cancelled) {

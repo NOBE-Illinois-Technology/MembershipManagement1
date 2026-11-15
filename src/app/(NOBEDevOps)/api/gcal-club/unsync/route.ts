@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    let query = supabase.from('events').delete();
+    // Only NOBE events are synced from the club calendar; never delete an org dashboard event.
+    let query = supabase.from('events').delete().is('org_id', null);
 
     if (customCalendarId) {
       query = query.like('gcal_event_id', `imported:public:${customCalendarId}:%`);

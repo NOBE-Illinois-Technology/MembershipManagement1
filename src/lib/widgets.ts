@@ -1,4 +1,5 @@
 import type { OrgSettings } from "./orgSettings";
+import { QUICK_ACTIONS } from "./quickActions";
 
 export type WidgetId =
   | "calendar"
@@ -8,7 +9,8 @@ export type WidgetId =
   | "quick-stats"
   | "manage-members"
   | "pending-absences"
-  | "org-info";
+  | "org-info"
+  | "quick-actions";
 
 export type WidgetDefinition = {
   id: WidgetId;
@@ -87,6 +89,16 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     targetView: "admin",
     colSpan: 2,
     getParamSummary: () => "Invite & role management",
+  },
+  {
+    id: "quick-actions",
+    title: "Quick Actions",
+    badge: "Admin",
+    description: "Shortcut buttons for admin tasks. Drag this card for an empty widget, or drag one button below to start with it.",
+    targetView: "admin",
+    colSpan: 1,
+    getParamSummary: (settings) =>
+      `${QUICK_ACTIONS.length} buttons • Strikes ${settings?.strikes_enabled ? "on" : "off in Settings"}`,
   },
   {
     id: "pending-absences",

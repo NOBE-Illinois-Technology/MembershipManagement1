@@ -1,14 +1,3 @@
--- Org settings (ticket #15): logo, primary/secondary colors, total points, point categories,
--- strikes, and committees. Builds on the organizations table from #11.
---
---   organizations       gains secondary_color, total_points_required, strikes_enabled, max_strikes
---                       (logo_url and primary_color already exist)
---   point_categories    0..n point types per org (Professional, Service, ...), each optional/mandatory
---   committees          0..n committees per org
---   storage: org-logos  public bucket for uploaded logos; organizations.logo_url points at the file
---
--- Additive only: nothing is renamed or dropped. Safe to run more than once.
--- Run in the Supabase dashboard: SQL Editor -> paste this file -> Run.
 
 begin;
 

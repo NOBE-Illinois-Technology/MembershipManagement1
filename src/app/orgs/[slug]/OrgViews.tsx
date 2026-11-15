@@ -17,8 +17,31 @@ import PointsWidget from "./widgets/PointsWidget";
 import ProfileWidget from "./widgets/ProfileWidget";
 import StrikesWidget from "./widgets/StrikesWidget";
 import MemberManagementWidget from "./widgets/MemberManagementWidget";
+import QuickActionsWidget from "./widgets/QuickActionsWidget";
+import QuickActionModal from "./widgets/quickActions/QuickActionModal";
+import CreateEventPanel from "./widgets/quickActions/CreateEventPanel";
+import {
+  QUICK_ACTIONS,
+  QUICK_ACTION_DRAG_TYPE,
+  getQuickActionAvailability,
+  isQuickActionId,
+  type QuickActionContext,
+  type QuickActionId,
+} from "@/lib/quickActions";
+import type { OrgEventRow } from "@/lib/orgEvents";
 
 type View = "admin" | "member";
+
+// Quick action buttons may only be dropped inside the Quick Actions widget, never on the dashboard.
+const isQuickActionDrag = (e: React.DragEvent) => e.dataTransfer.types.includes(QUICK_ACTION_DRAG_TYPE);
+
+type QuickActionsState = {
+  actions: QuickActionId[];
+  context: QuickActionContext;
+  isCustomizing: boolean;
+  onAdd: (id: QuickActionId) => void;
+  onRemove: (id: QuickActionId) => void;
+};
 
 const SAMPLE_MEMBERS = [
   { id: "1", name: "Risha Bansal", email: "rishab5@illinois.edu", role: "ADMIN", committee: "Technology", major: "CS", year: "2029", college: "Grainger", totalPoints: 6, activeStrikes: 0, joinedAt: "2026-07-01" },
@@ -55,12 +78,42 @@ const SAMPLE_ATTENDANCE = [
   { memberId: "4", eventId: "e4", checkedInAt: "2026-11-03T16:42:00" },
 ];
 
-// Events and member-specific data aren't stored per org yet, so those widgets use sample data.
-function renderWidgetContent(widgetId: WidgetId, org: Org, settings?: OrgSettings | null) {
+// The calendar and quick actions use the org's real events; member-specific data (points,
+// attendance, roster) isn't loaded per org yet, so those widgets still use sample data.
+function renderWidgetContent(
+  widgetId: WidgetId,
+  org: Org,
+  settings: OrgSettings | null | undefined,
+  events: OrgEventRow[],
+  quickActions: QuickActionsState,
+  // Admin view only: clicking an event on the Calendar opens it for editing.
+  onEditEvent?: (eventId: string) => void
+) {
   const accentColor = settings?.primary_color ?? org.primary_color;
   switch (widgetId) {
+    case "quick-actions":
+      return (
+        <QuickActionsWidget
+          orgSlug={org.slug}
+          orgName={org.name}
+          settings={settings}
+          events={events}
+          context={quickActions.context}
+          accentColor={accentColor}
+          actions={quickActions.actions}
+          isCustomizing={quickActions.isCustomizing}
+          onAddAction={quickActions.onAdd}
+          onRemoveAction={quickActions.onRemove}
+        />
+      );
     case "calendar":
-      return <CalendarWidget events={[]} accentColor={accentColor} />;
+      return (
+        <CalendarWidget
+          events={events.map((e) => ({ id: e.id, title: e.name, date: e.date }))}
+          accentColor={accentColor}
+          onEventClick={onEditEvent}
+        />
+      );
     case "points":
       return <PointsWidget settings={settings} earnedByCategory={{}} accentColor={accentColor} />;
     case "profile":
@@ -85,7 +138,20 @@ function renderWidgetContent(widgetId: WidgetId, org: Org, settings?: OrgSetting
   }
 }
 
-export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSettings | null }) {
+export default function OrgViews({
+  org,
+  settings,
+  events = [],
+}: {
+  org: Org;
+  settings?: OrgSettings | null;
+  // The org's own events, loaded by the page.
+  events?: OrgEventRow[];
+}) {
+  const quickActionContext: QuickActionContext = {
+    settings,
+    hasMandatoryEvents: events.some((e) => e.is_mandatory),
+  };
   const isAdmin = org.role === "ADMIN";
   const [view, setView] = useState<View>(isAdmin ? "admin" : "member");
 
@@ -101,6 +167,11 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
+  // Buttons placed inside the Quick Actions widget (admin view only), saved like the layouts.
+  const [quickActions, setQuickActions] = useState<QuickActionId[]>([]);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const quickActionsKey = `org_quick_actions_${org.id}`;
+
   // Load saved layouts from localStorage if available
   useEffect(() => {
     try {
@@ -113,6 +184,11 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
       if (savedMember) {
         const parsed = JSON.parse(savedMember);
         if (Array.isArray(parsed)) setMemberWidgets(parsed);
+      }
+      const savedQuickActions = localStorage.getItem(`org_quick_actions_${org.id}`);
+      if (savedQuickActions) {
+        const parsed = JSON.parse(savedQuickActions);
+        if (Array.isArray(parsed)) setQuickActions([...new Set(parsed.filter(isQuickActionId))]);
       }
     } catch {
       // LocalStorage unavailable
@@ -142,6 +218,11 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
   const availableWidgets = getAvailableWidgets(settings, view);
 
   function addWidget(widgetId: WidgetId, targetIndex?: number) {
+    // There's one set of quick action buttons, so only one Quick Actions widget.
+    if (widgetId === "quick-actions" && activeWidgets.includes("quick-actions")) {
+      showFeedback("Quick Actions is already on the dashboard. Drag buttons into it instead.");
+      return;
+    }
     const list = [...activeWidgets];
     if (typeof targetIndex === "number" && targetIndex >= 0 && targetIndex <= list.length) {
       list.splice(targetIndex, 0, widgetId);
@@ -157,6 +238,8 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
     const list = [...activeWidgets];
     const [removed] = list.splice(index, 1);
     saveLayout(list);
+    // Its buttons go with it, so re-adding the widget starts empty.
+    if (removed === "quick-actions") saveQuickActions([]);
     const def = ALL_WIDGETS.find((w) => w.id === removed);
     showFeedback(`Removed "${def?.title || removed}" from dashboard`);
   }
@@ -171,8 +254,68 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
 
   function clearLayout() {
     saveLayout([]);
+    if (view === "admin") saveQuickActions([]);
     showFeedback(`Cleared ${view} layout`);
   }
+
+  function saveQuickActions(list: QuickActionId[]) {
+    setQuickActions(list);
+    try {
+      localStorage.setItem(quickActionsKey, JSON.stringify(list));
+    } catch {}
+  }
+
+  // Adds a button to the Quick Actions widget. From the side panel's "+ Add" the widget may not be
+  // on the dashboard yet, so it's added too.
+  // Adds a button to the Quick Actions widget. If the widget isn't on the dashboard yet, it's placed
+  // too (at `targetIndex`, or at the end), so dragging a single button brings the widget with it.
+  function addQuickAction(id: QuickActionId, targetIndex?: number) {
+    const def = QUICK_ACTIONS.find((a) => a.id === id);
+    const availability = getQuickActionAvailability(id, quickActionContext);
+    if (!availability.available) {
+      showFeedback(availability.reason);
+      return;
+    }
+    const widgetPlaced = adminWidgets.includes("quick-actions");
+    if (widgetPlaced && quickActions.includes(id)) {
+      showFeedback(`"${def?.label}" is already in Quick Actions`);
+      return;
+    }
+    if (!quickActions.includes(id)) saveQuickActions([...quickActions, id]);
+    if (!widgetPlaced) {
+      const layout = [...adminWidgets];
+      const at = typeof targetIndex === "number" ? Math.min(Math.max(targetIndex, 0), layout.length) : layout.length;
+      layout.splice(at, 0, "quick-actions");
+      saveLayout(layout);
+      showFeedback(`Added the Quick Actions widget with "${def?.label}"`);
+      return;
+    }
+    showFeedback(`Added "${def?.label}" to Quick Actions`);
+  }
+
+  // The quick action button being dropped, if the drag is one.
+  function droppedQuickAction(e: React.DragEvent): QuickActionId | null {
+    const id = e.dataTransfer.getData(QUICK_ACTION_DRAG_TYPE);
+    return isQuickActionId(id) ? id : null;
+  }
+
+  function removeQuickAction(id: QuickActionId) {
+    saveQuickActions(quickActions.filter((a) => a !== id));
+    showFeedback(`Removed "${QUICK_ACTIONS.find((a) => a.id === id)?.label}" from Quick Actions`);
+  }
+
+  const quickActionsState: QuickActionsState = {
+    actions: quickActions,
+    context: quickActionContext,
+    isCustomizing: isAdmin,
+    onAdd: (id) => addQuickAction(id),
+    onRemove: removeQuickAction,
+  };
+
+  // The event open in the edit pop-up (an admin clicked it on the Calendar). Looked up in the
+  // page's events each render, so after a save the form's data is current, and after a delete
+  // (the event disappears on refresh) the pop-up closes on its own.
+  const editingEvent = editingEventId ? events.find((e) => e.id === editingEventId) : undefined;
 
   return (
     <div style={{ width: "100%", maxWidth: showSidebar ? "1200px" : "960px", transition: "max-width 0.2s ease" }}>
@@ -227,6 +370,28 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
         </div>
       )}
 
+      {/* Edit / delete an event clicked on the Calendar (admins only) */}
+      {isAdmin && editingEvent && (
+        <QuickActionModal
+          eyebrow="Calendar"
+          title="Edit Event"
+          subtitle={`Change or delete "${editingEvent.name}".`}
+          onClose={() => setEditingEventId(null)}
+        >
+          <CreateEventPanel
+            key={editingEvent.id}
+            orgSlug={org.slug}
+            settings={settings}
+            accentColor={settings?.primary_color ?? org.primary_color}
+            existing={editingEvent}
+            onDeleted={() => {
+              setEditingEventId(null);
+              showFeedback(`Deleted "${editingEvent.name}"`);
+            }}
+          />
+        </QuickActionModal>
+      )}
+
       {/* Toast Feedback */}
       {feedback && (
         <div style={toastStyle}>
@@ -246,6 +411,11 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
               }}
               onDrop={(e) => {
                 e.preventDefault();
+                const action = droppedQuickAction(e);
+                if (action) {
+                  addQuickAction(action);
+                  return;
+                }
                 const newId = (e.dataTransfer.getData("application/widget-id") || draggingSidebarId) as WidgetId;
                 if (newId) {
                   addWidget(newId);
@@ -340,7 +510,9 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
                       onDragOver={(e) => {
                         if (!isAdmin) return;
                         e.preventDefault();
-                        setDropTargetIndex(index);
+                        // A single button joins the existing Quick Actions widget, so don't
+                        // highlight this card as a place it'll be inserted.
+                        if (!(isQuickActionDrag(e) && adminWidgets.includes("quick-actions"))) setDropTargetIndex(index);
                       }}
                       onDragLeave={() => {
                         if (dropTargetIndex === index) setDropTargetIndex(null);
@@ -349,6 +521,13 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
                         if (!isAdmin) return;
                         e.preventDefault();
                         setDropTargetIndex(null);
+
+                        // A single quick action button: into the Quick Actions widget (placed here if needed)
+                        const action = droppedQuickAction(e);
+                        if (action) {
+                          addQuickAction(action, index);
+                          return;
+                        }
 
                         // Check if dropping new widget from sidebar
                         const newId = e.dataTransfer.getData("application/widget-id") as WidgetId;
@@ -379,7 +558,14 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
                         isCustomizing={isAdmin}
                         onRemove={() => removeWidget(index)}
                       >
-                        {renderWidgetContent(widgetId, org, settings)}
+                        {renderWidgetContent(
+                          widgetId,
+                          org,
+                          settings,
+                          events,
+                          quickActionsState,
+                          isAdmin && view === "admin" ? setEditingEventId : undefined
+                        )}
                       </WidgetTemplate>
                     </div>
                   );
@@ -395,6 +581,11 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
+                    const action = droppedQuickAction(e);
+                    if (action) {
+                      addQuickAction(action);
+                      return;
+                    }
                     const newId = (e.dataTransfer.getData("application/widget-id") || draggingSidebarId) as WidgetId;
                     if (newId) {
                       addWidget(newId);
@@ -478,6 +669,17 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
                       ⚙️ {paramSummary}
                     </div>
 
+                    {/* Quick Actions holds its buttons: drag the card for an empty widget, or drag one
+                        button to place the widget with just that button */}
+                    {widget.id === "quick-actions" && (
+                      <QuickActionChips
+                        context={quickActionContext}
+                        inWidget={(id) => quickActions.includes(id) && adminWidgets.includes("quick-actions")}
+                        onAdd={(id) => addQuickAction(id)}
+                        onDragStart={() => setDraggingSidebarId(null)}
+                      />
+                    )}
+
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontSize: "10px", color: "#94A3B8" }}>Drag into dashboard</span>
                       <button
@@ -501,6 +703,7 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
                 );
               })}
             </div>
+
           </aside>
         )}
       </div>
@@ -509,6 +712,91 @@ export default function OrgViews({ org, settings }: { org: Org; settings?: OrgSe
 }
 
 /* ---------- Subcomponents & Icons ---------- */
+
+// The quick action buttons inside the side panel's Quick Actions card. Each available button can be
+// dragged on its own (dropping it anywhere on the dashboard adds it to the Quick Actions widget,
+// placing the widget first if needed) or clicked to add. Buttons that need something in Settings
+// first are shown greyed out with the reason, and can't be dragged.
+function QuickActionChips({
+  context,
+  inWidget,
+  onAdd,
+  onDragStart,
+}: {
+  context: QuickActionContext;
+  inWidget: (id: QuickActionId) => boolean;
+  onAdd: (id: QuickActionId) => void;
+  onDragStart: () => void;
+}) {
+  return (
+    <div style={{ display: "grid", gap: "6px", margin: "0 0 10px", padding: "8px", background: "#F8FAFC", border: "1px dashed #CBD5E1", borderRadius: "10px" }}>
+      <span style={{ fontSize: "10px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        Buttons — drag one on its own
+      </span>
+      {QUICK_ACTIONS.map((action) => {
+        const availability = getQuickActionAvailability(action.id, context);
+        const added = inWidget(action.id);
+        const draggable = availability.available && !added;
+        return (
+          <div
+            key={action.id}
+            draggable={draggable}
+            onDragStart={(e) => {
+              // Keep the card's own drag handler from turning this into a whole-widget drag.
+              e.stopPropagation();
+              onDragStart();
+              e.dataTransfer.setData(QUICK_ACTION_DRAG_TYPE, action.id);
+              e.dataTransfer.effectAllowed = "copy";
+            }}
+            title={availability.available ? action.description : availability.reason}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "6px 8px",
+              background: availability.available ? "white" : "#F1F5F9",
+              border: `1px ${availability.available ? "solid" : "dashed"} #CBD5E1`,
+              borderRadius: "999px",
+              cursor: draggable ? "grab" : "default",
+              opacity: availability.available ? 1 : 0.75,
+            }}
+          >
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: "12px", fontWeight: 700, color: availability.available ? "#0F172A" : "#64748B" }}>
+                {action.label}
+              </span>
+              {!availability.available && (
+                <span style={{ display: "block", fontSize: "10px", color: "#64748B", lineHeight: 1.3 }}>{availability.reason}</span>
+              )}
+            </span>
+            {availability.available &&
+              (added ? (
+                <span style={{ fontSize: "10px", fontWeight: 700, color: "#047857" }}>✓ Added</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onAdd(action.id)}
+                  aria-label={`Add ${action.label} to Quick Actions`}
+                  style={{
+                    padding: "2px 7px",
+                    fontSize: "11px",
+                    background: "#F8FAFC",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "999px",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    color: "#0F172A",
+                  }}
+                >
+                  +
+                </button>
+              ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 function ToggleButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button

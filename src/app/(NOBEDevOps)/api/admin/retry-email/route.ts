@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/app/(NOBEDevOps)/utils/supabase/server";
+import { getOrgRole, NOBE_SLUG } from "@/lib/membership";
 
 export async function POST(request: Request) {
   try {
@@ -17,10 +18,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "You must be logged in." }, { status: 401 });
     }
 
+    if ((await getOrgRole(user.id, NOBE_SLUG)) !== "ADMIN") {
+      return NextResponse.json({ error: "Only NOBE admins can review absence requests." }, { status: 403 });
+    }
+
     const { data: absence, error: absenceError } = await supabase
       .from("excused_absences")
       .select("id, user_id, status, reason, admin_response")
       .eq("id", absenceId)
+      .is("org_id", null)
       .single();
 
     if (absenceError || !absence) {

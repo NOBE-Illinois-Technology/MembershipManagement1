@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     const { data: events, error: eventsError } = await supabaseAdmin
       .from("events")
       .select("name, event_type, date, points, is_mandatory, location, dresscode")
+      .is("org_id", null)
       .gte("date", now.toISOString())
       .lt("date", weekFromNow.toISOString())
       .order("date", { ascending: true });

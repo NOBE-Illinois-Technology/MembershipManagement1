@@ -63,6 +63,7 @@ export default function AbsencePage() {
             .from('excused_absences')
             .select('id, event_id, reason, submitted_at, reviewed_by, reviewed_at, status')
             .eq('user_id', user.id)
+            .is('org_id', null)
             .order('submitted_at', { ascending: false });
 
         if (error) {
@@ -91,6 +92,7 @@ export default function AbsencePage() {
             const { data } = await supabase
                 .from('events')
                 .select('id, name, date, is_mandatory')
+                .is('org_id', null)
                 .order('date', { ascending: false });
 
             setEvents(data || []);

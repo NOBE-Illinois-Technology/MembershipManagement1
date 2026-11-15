@@ -110,20 +110,24 @@ export default async function AdminPage() {
       .from("events")
       .select(
         "id, name, date, event_type, is_mandatory, check_in_ends_at, strikes_processed, qr_code_secret, points, created_at, location, gcal_event_id, dresscode"
-      ),
+      )
+      .is("org_id", null),
     supabase
       .from("attendance")
-      .select("id, user_id, event_id, timestamp"),
+      .select("id, user_id, event_id, timestamp")
+      .is("org_id", null),
     supabase
       .from("excused_absences")
       .select(
         "id, user_id, event_id, status, reason, submitted_at, email_sent, email_error"
-      ),
+      )
+      .is("org_id", null),
     supabase
       .from("strikes")
       .select(
         "id, user_id, event_id, strike_type, reason, status, source, admin_note, created_by, created_at"
       )
+      .is("org_id", null)
       .eq("status", "ACTIVE"),
     supabase
       .from("csv_uploads")
