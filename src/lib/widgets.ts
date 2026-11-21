@@ -1,4 +1,5 @@
 import type { OrgSettings } from "./orgSettings";
+import type { QuickActionId } from "./quickActions";
 import { QUICK_ACTIONS } from "./quickActions";
 
 export type WidgetId =
@@ -75,7 +76,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     id: "quick-stats",
     title: "Admin Overview",
     badge: "Admin",
-    description: "Key organization indicators and overview metrics.",
+    description: "Key organization indicators, member count, and overview metrics.",
     targetView: "admin",
     colSpan: 2,
     getParamSummary: (settings) =>
@@ -94,7 +95,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     id: "quick-actions",
     title: "Quick Actions",
     badge: "Admin",
-    description: "Shortcut buttons for admin tasks. Drag this card for an empty widget, or drag one button below to start with it.",
+    description: "Shortcut buttons for admin tasks like creating events, emailing members, reviewing absences, and processing strikes.",
     targetView: "admin",
     colSpan: 1,
     getParamSummary: (settings) =>
@@ -121,9 +122,29 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
   },
 ];
 
-// No start template by default — users build their dashboard via drag & drop
-export const DEFAULT_ADMIN_WIDGETS: WidgetId[] = [];
-export const DEFAULT_MEMBER_WIDGETS: WidgetId[] = [];
+// Recommended cohesive default layout for true admin and member views
+export const DEFAULT_ADMIN_WIDGETS: WidgetId[] = [
+  "quick-actions",
+  "calendar",
+  "manage-members",
+  "points",
+  "strikes",
+  "profile",
+];
+
+export const DEFAULT_MEMBER_WIDGETS: WidgetId[] = [
+  "calendar",
+  "points",
+  "profile",
+  "strikes",
+];
+
+export const DEFAULT_QUICK_ACTIONS: QuickActionId[] = [
+  "create-event",
+  "email-members",
+  "strikes",
+  "absence-review",
+];
 
 /**
  * Populates the list of available widgets based on Nadia's org settings parameters
