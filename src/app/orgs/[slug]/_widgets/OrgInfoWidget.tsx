@@ -125,17 +125,16 @@ export default function OrgInfoWidget({ org, settings, accentColor = "#3B82F6" }
           style={{
             width: "100%",
             padding: "8px 12px",
-            background: copied ? "#10B981" : "#F8FAFC",
+            background: copied ? "#059669" : "#F8FAFC",
             color: copied ? "white" : "#0F172A",
-            border: `1px solid ${copied ? "#10B981" : "#CBD5E1"}`,
-            borderRadius: "8px",
+            border: `1px solid ${copied ? "#059669" : "#CBD5E1"}`,
+            borderRadius: "6px",
             fontSize: "12px",
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: "pointer",
-            transition: "all 0.2s ease",
           }}
         >
-          {copied ? "✓ Invite Link Copied!" : "📋 Generate & Copy Invite Link"}
+          {copied ? "Invite link copied to clipboard" : "Generate and copy invite link"}
         </button>
       </div>
     </div>

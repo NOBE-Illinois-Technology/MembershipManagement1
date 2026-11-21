@@ -45,28 +45,24 @@ export default function QuickStatsWidget({
           value={String(memberCount)}
           subtext="Active in org"
           accentColor={accentColor}
-          icon="👥"
         />
         <StatCard
           label="Upcoming Events"
           value={String(upcomingEvents.length)}
           subtext={`${events.length} total scheduled`}
           accentColor={accentColor}
-          icon="📅"
         />
         <StatCard
           label="Point Minimum"
           value={pointsRequired > 0 ? `${pointsRequired} pts` : "None"}
           subtext={`${categories.length} categories`}
           accentColor={accentColor}
-          icon="🎯"
         />
         <StatCard
           label="Strikes System"
           value={strikesEnabled ? `Max: ${maxStrikes}` : "Off"}
           subtext={strikesEnabled ? "Enforced on absences" : "Disabled in settings"}
           accentColor={strikesEnabled ? "#DC2626" : "#64748B"}
-          icon="⚠️"
         />
       </div>
 
@@ -110,13 +106,11 @@ function StatCard({
   value,
   subtext,
   accentColor,
-  icon,
 }: {
   label: string;
   value: string;
   subtext: string;
   accentColor: string;
-  icon: string;
 }) {
   return (
     <div
@@ -135,7 +129,6 @@ function StatCard({
         <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
           {label}
         </span>
-        <span style={{ fontSize: "14px" }}>{icon}</span>
       </div>
       <div style={{ fontSize: "22px", fontWeight: 800, color: "#0F172A", lineHeight: 1.1 }}>
         {value}

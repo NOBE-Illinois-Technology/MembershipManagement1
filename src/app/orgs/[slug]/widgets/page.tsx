@@ -4,7 +4,7 @@ import { loadOrgSettings } from "@/lib/orgSettingsStore";
 import type { OrgSettings } from "@/lib/orgSettings";
 import { createAdminClient } from "@/app/(NOBEDevOps)/utils/supabase/admin";
 import { ORG_EVENT_COLUMNS, type OrgEventRow } from "@/lib/orgEvents";
-import WidgetCustomizer from "./WidgetCustomizer";
+import WidgetCustomizer from "../_widgets/WidgetCustomizer";
 
 export const dynamic = "force-dynamic";
 
@@ -42,11 +42,11 @@ export default async function OrgWidgetsPage({ params }: { params: Promise<{ slu
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        padding: "36px 20px 80px",
+        padding: "48px 24px 120px",
         alignItems: "center",
         boxSizing: "border-box",
         fontFamily: "Roboto, sans-serif",
-        background: `linear-gradient(135deg, ${org.primary_color}44, ${org.secondary_color ? `${org.secondary_color}44` : "#F8FAFC"})`,
+        background: `linear-gradient(135deg, ${org.primary_color}55, ${org.secondary_color ? `${org.secondary_color}55` : "#FBFBF9"})`,
       }}
     >
       <WidgetCustomizer org={org} settings={settings} events={events} />

@@ -12,16 +12,16 @@ import {
   type WidgetId,
 } from "@/lib/widgets";
 import WidgetTemplate from "./WidgetTemplate";
-import QuickActionModal from "./widgets/quickActions/QuickActionModal";
-import CreateEventPanel from "./widgets/quickActions/CreateEventPanel";
-import AbsenceReviewPanel from "./widgets/quickActions/AbsenceReviewPanel";
+import QuickActionModal from "./_widgets/quickActions/QuickActionModal";
+import CreateEventPanel from "./_widgets/quickActions/CreateEventPanel";
+import AbsenceReviewPanel from "./_widgets/quickActions/AbsenceReviewPanel";
 import {
   isQuickActionId,
   type QuickActionContext,
   type QuickActionId,
 } from "@/lib/quickActions";
 import type { OrgEventRow } from "@/lib/orgEvents";
-import { renderWidgetContent, type QuickActionsState } from "./widgets/WidgetRenderer";
+import { renderWidgetContent, type QuickActionsState } from "./_widgets/WidgetRenderer";
 
 type View = "admin" | "member";
 
@@ -235,8 +235,7 @@ export default function OrgViews({
       <main style={{ width: "100%" }}>
         {activeWidgets.length === 0 ? (
           <div style={emptyDashboardStyle}>
-            <div style={{ fontSize: "40px", marginBottom: "12px" }}>🧩</div>
-            <h3 style={{ margin: "0 0 6px", fontSize: "20px", fontWeight: 700, color: "#1E293B" }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: "18px", fontWeight: 700, color: "#1E293B" }}>
               No Widgets on Dashboard
             </h3>
             <p style={{ margin: "0 0 20px", color: "#64748B", fontSize: "14px", maxWidth: "480px" }}>

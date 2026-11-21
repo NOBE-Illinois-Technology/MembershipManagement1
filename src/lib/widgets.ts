@@ -43,7 +43,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     getParamSummary: (settings) => {
       const total = settings?.total_points_required ?? 0;
       const count = settings?.categories?.length ?? 0;
-      return `${total > 0 ? `${total} pts required` : "No point minimum"} • ${count} ${count === 1 ? "category" : "categories"}`;
+      return `${total > 0 ? `${total} pts required` : "No point minimum"}, ${count} ${count === 1 ? "category" : "categories"}`;
     },
   },
   {
@@ -80,7 +80,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     targetView: "admin",
     colSpan: 2,
     getParamSummary: (settings) =>
-      `${settings?.categories?.length ?? 0} point types • ${settings?.committees?.length ?? 0} committees`,
+      `${settings?.categories?.length ?? 0} point types, ${settings?.committees?.length ?? 0} committees`,
   },
   {
     id: "manage-members",
@@ -99,7 +99,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     targetView: "admin",
     colSpan: 1,
     getParamSummary: (settings) =>
-      `${QUICK_ACTIONS.length} buttons • Strikes ${settings?.strikes_enabled ? "on" : "off in Settings"}`,
+      `${QUICK_ACTIONS.length} buttons, Strikes ${settings?.strikes_enabled ? "on" : "off in Settings"}`,
   },
   {
     id: "pending-absences",
@@ -118,7 +118,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     targetView: "both",
     colSpan: 1,
     getParamSummary: (settings) =>
-      `Primary: ${settings?.primary_color ?? "#5b8def"}${settings?.secondary_color ? ` • Sec: ${settings.secondary_color}` : ""}`,
+      `Primary: ${settings?.primary_color ?? "#5b8def"}${settings?.secondary_color ? `, Sec: ${settings.secondary_color}` : ""}`,
   },
 ];
 

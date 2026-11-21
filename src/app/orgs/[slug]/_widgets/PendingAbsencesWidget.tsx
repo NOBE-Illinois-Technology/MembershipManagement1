@@ -61,12 +61,11 @@ export default function PendingAbsencesWidget({
 
   if (pending.length === 0) {
     return (
-      <div style={{ padding: "24px 16px", textAlign: "center", background: "#F0FDF4", borderRadius: "10px", border: "1px solid #BBF7D0" }}>
-        <div style={{ fontSize: "24px", marginBottom: "6px" }}>✓</div>
+      <div style={{ padding: "20px 16px", textAlign: "center", background: "#F0FDF4", borderRadius: "6px", border: "1px solid #BBF7D0" }}>
         <div style={{ fontSize: "13px", fontWeight: 700, color: "#166534", marginBottom: "2px" }}>
           All Clear
         </div>
-        <div style={{ fontSize: "11px", color: "#15803D" }}>
+        <div style={{ fontSize: "12px", color: "#15803D" }}>
           No pending absence requests awaiting review.
         </div>
       </div>
