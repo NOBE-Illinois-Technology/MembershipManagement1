@@ -14,6 +14,7 @@ import {
 import WidgetTemplate from "./WidgetTemplate";
 import CalendarWidget from "./widgets/CalendarWidget";
 import PointsWidget from "./widgets/PointsWidget";
+import AttendanceSummary from "./widgets/AttendanceSummary";
 import ProfileWidget from "./widgets/ProfileWidget";
 import StrikesWidget from "./widgets/StrikesWidget";
 import MemberManagementWidget from "./widgets/MemberManagementWidget";
@@ -114,8 +115,28 @@ function renderWidgetContent(
           onEventClick={onEditEvent}
         />
       );
-    case "points":
+    case "club-progress":
       return <PointsWidget settings={settings} earnedByCategory={{}} accentColor={accentColor} />;
+    case "attendance":
+      return (
+        <AttendanceSummary
+          memberId="preview"
+          events={events.map((event) => ({
+            id: event.id,
+            name: event.name,
+            date: event.date,
+            category: event.event_type,
+            isMandatory: event.is_mandatory,
+          }))}
+          attendance={[]}
+          absences={[]}
+          categories={settings?.categories?.map((category) => ({
+            name: category.name,
+            mandatory: category.is_mandatory,
+          }))}
+          accentColor={accentColor}
+        />
+      );
     case "profile":
       return <ProfileWidget accentColor={accentColor} />;
     case "strikes":

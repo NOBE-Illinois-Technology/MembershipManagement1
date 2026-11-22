@@ -11,6 +11,9 @@ export default function InviteAcceptance({ token }: { token: string }) {
   const [signedIn, setSignedIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [committees, setCommittees] = useState<Array<{ id: number; name: string }>>([]);
+  const [committeeId, setCommitteeId] = useState<number | null>(null);
+  const [orgName, setOrgName] = useState<string | null>(null);
   const nextPath = `/org-invite/${encodeURIComponent(token)}`;
 
   useEffect(() => {
@@ -34,6 +37,23 @@ export default function InviteAcceptance({ token }: { token: string }) {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/org-invites/accept?token=${encodeURIComponent(token)}`)
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error ?? "Could not load this invitation.");
+        if (!active) return;
+        setOrgName(result.org.name);
+        setCommittees(result.committees ?? []);
+      })
+      .catch((inviteError: unknown) => {
+        if (!active) return;
+        setError(inviteError instanceof Error ? inviteError.message : "Could not load this invitation.");
+      });
+    return () => { active = false; };
+  }, [token]);
+
   async function acceptInvite() {
     setSubmitting(true);
     setError(null);
@@ -41,11 +61,13 @@ export default function InviteAcceptance({ token }: { token: string }) {
       const response = await fetch("/api/org-invites/accept", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token, committee_id: committeeId }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not accept this invite.");
-      router.replace("/Layer3");
+      router.replace(result.org.slug === "nobe"
+        ? "/users/member"
+        : `/orgs/${encodeURIComponent(result.org.slug)}`);
       router.refresh();
     } catch (acceptError) {
       setError(acceptError instanceof Error ? acceptError.message : "Could not accept this invite.");
@@ -63,9 +85,33 @@ export default function InviteAcceptance({ token }: { token: string }) {
         </p>
         {error && <p role="alert" style={errorStyle}>{error}</p>}
         {!checking && signedIn && (
-          <button type="button" onClick={acceptInvite} disabled={submitting} style={buttonStyle}>
-            {submitting ? "Joining…" : "Join organization"}
-          </button>
+          <>
+            {orgName && <p style={{ ...textStyle, marginTop: 0 }}>Join {orgName}</p>}
+            {committees.length > 0 && (
+              <label style={{ display: "grid", gap: "8px", marginBottom: "16px", textAlign: "left", fontWeight: 700, color: "#334155" }}>
+                Select your committee
+                <select
+                  value={committeeId ?? ""}
+                  onChange={(event) => setCommitteeId(event.target.value ? Number(event.target.value) : null)}
+                  required
+                  style={{ padding: "12px", borderRadius: "8px", border: "1px solid #CBD5E1", font: "inherit" }}
+                >
+                  <option value="">Choose a committee</option>
+                  {committees.map((committee) => (
+                    <option key={committee.id} value={committee.id}>{committee.name}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <button
+              type="button"
+              onClick={acceptInvite}
+              disabled={submitting || (committees.length > 0 && committeeId === null)}
+              style={{ ...buttonStyle, opacity: submitting || (committees.length > 0 && committeeId === null) ? 0.6 : 1 }}
+            >
+              {submitting ? "Joining…" : "Join organization"}
+            </button>
+          </>
         )}
         {!checking && !signedIn && (
           <div style={{ display: "grid", gap: "12px" }}>

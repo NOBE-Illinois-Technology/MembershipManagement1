@@ -3,7 +3,8 @@ import { QUICK_ACTIONS } from "./quickActions";
 
 export type WidgetId =
   | "calendar"
-  | "points"
+  | "club-progress"
+  | "attendance"
   | "profile"
   | "strikes"
   | "quick-stats"
@@ -33,10 +34,10 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     getParamSummary: () => "Event schedule parameters",
   },
   {
-    id: "points",
-    title: "Points & Attendance",
+    id: "club-progress",
+    title: "Club Progress",
     badge: "Widget 2",
-    description: "Point breakdown and event attendance requirement tracker.",
+    description: "Member point totals and progress toward organization requirements.",
     targetView: "both",
     colSpan: 1,
     getParamSummary: (settings) => {
@@ -44,6 +45,16 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
       const count = settings?.categories?.length ?? 0;
       return `${total > 0 ? `${total} pts required` : "No point minimum"} • ${count} ${count === 1 ? "category" : "categories"}`;
     },
+  },
+  {
+    id: "attendance",
+    title: "Attendance",
+    badge: "Widget 3",
+    description: "Member attendance totals and event participation tracker.",
+    targetView: "both",
+    colSpan: 1,
+    getParamSummary: (settings) =>
+      `${settings?.categories?.length ?? 0} attendance ${settings?.categories?.length === 1 ? "category" : "categories"}`,
   },
   {
     id: "profile",
