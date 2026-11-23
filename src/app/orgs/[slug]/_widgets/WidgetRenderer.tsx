@@ -2,11 +2,13 @@
 
 import type { Org } from "@/app/Layer3/orgs";
 import type { OrgSettings } from "@/lib/orgSettings";
-import type { OrgEventRow } from "@/lib/orgEvents";
+import { committeeLabel } from "@/lib/orgEvents";
+import type { OrgDashboardData } from "@/lib/orgDashboard";
 import type { WidgetId } from "@/lib/widgets";
 import type { QuickActionId, QuickActionContext } from "@/lib/quickActions";
 import CalendarWidget from "./CalendarWidget";
 import PointsWidget from "./PointsWidget";
+import AttendanceSummary from "./AttendanceSummary";
 import ProfileWidget from "./ProfileWidget";
 import StrikesWidget from "./StrikesWidget";
 import MemberManagementWidget from "./MemberManagementWidget";
@@ -23,52 +25,32 @@ export type QuickActionsState = {
   onRemove: (id: QuickActionId) => void;
 };
 
-export const SAMPLE_MEMBERS = [
-  { id: "1", name: "Risha Bansal", email: "rishab5@illinois.edu", role: "ADMIN", committee: "Technology", major: "CS", year: "2029", college: "Grainger", totalPoints: 6, activeStrikes: 0, joinedAt: "2026-07-01" },
-  { id: "2", name: "Srikriti Mutyala", email: "mutyala3@illinois.edu", role: "ADMIN", committee: "Technology", major: "CS+Statistics", year: "2029", college: "Grainger", totalPoints: 1, activeStrikes: 1, joinedAt: "2026-08-20" },
-  { id: "3", name: "Vinay Nair", email: "vinayn5@illinois.edu", role: "MEMBER", committee: "Technology", totalPoints: 0, activeStrikes: 0, joinedAt: "2026-01-10" },
-  { id: "4", name: "Nadia Shastri", email: "nadiaks2@illinois.edu", role: "MEMBER", committee: "Technology", totalPoints: 0, activeStrikes: 0, joinedAt: "2026-01-11" },
-];
+// Everything a widget may need. Used by the dashboard (OrgViews) and the widget customizer so a
+// widget looks the same in both places.
+export type WidgetRenderContext = {
+  org: Org;
+  settings: OrgSettings | null | undefined;
+  // Real org data loaded by the page (see loadOrgDashboardData).
+  data: OrgDashboardData;
+  quickActions: QuickActionsState;
+  // Admin dashboard only: clicking an event on the Calendar opens it for editing.
+  onEditEvent?: (eventId: string) => void;
+  onOpenAbsenceReview?: () => void;
+};
 
-export const SAMPLE_EVENTS = [
-  { id: "e1", name: "Semi Formal", date: "2026-11-11", eventType: "social", category: "Social" },
-  { id: "e2", name: "Slime Social", date: "2026-11-10", eventType: "social", category: "Social" },
-  { id: "e3", name: "Investment 101 Workshop", date: "2026-11-05", eventType: "professional", category: "Professional" },
-  { id: "e4", name: "Literary Bookmarks with MBSA", date: "2026-11-03", eventType: "service", category: "Service" },
-];
-
-export const SAMPLE_ATTENDANCE = [
-  { memberId: "1", eventId: "e2", checkedInAt: "2026-11-10T17:53:00" },
-  { memberId: "1", eventId: "e3", checkedInAt: "2026-11-05T18:05:00" },
-  { memberId: "1", eventId: "e4", checkedInAt: "2026-11-03T16:30:00" },
-  { memberId: "2", eventId: "e3", checkedInAt: "2026-11-05T18:02:00" },
-  { memberId: "2", eventId: "e1", checkedInAt: "2026-11-11T20:10:00" },
-  { memberId: "3", eventId: "e1", checkedInAt: "2026-11-11T20:15:00" },
-  { memberId: "3", eventId: "e2", checkedInAt: "2026-11-10T17:48:00" },
-  { memberId: "4", eventId: "e4", checkedInAt: "2026-11-03T16:42:00" },
-];
-
-export function renderWidgetContent(
-  widgetId: WidgetId,
-  org: Org,
-  settings: OrgSettings | null | undefined,
-  events: OrgEventRow[],
-  quickActions: QuickActionsState,
-  onEditEvent?: (eventId: string) => void,
-  onOpenAbsenceReview?: () => void
-) {
+export function renderWidgetContent(widgetId: WidgetId, ctx: WidgetRenderContext) {
+  const { org, settings, data, quickActions } = ctx;
   const accentColor = settings?.primary_color ?? org.primary_color ?? "#3B82F6";
-
-  const memberEvents = events.length > 0
-    ? events.map((e) => ({
-        id: e.id,
-        name: e.name,
-        date: e.date,
-        eventType: e.event_type,
-        category: e.event_type,
-        isMandatory: e.is_mandatory,
-      }))
-    : SAMPLE_EVENTS;
+  const committees = settings?.committees ?? [];
+  const categories = settings?.categories?.map((c) => ({ name: c.name, mandatory: c.is_mandatory }));
+  const memberEvents = data.events.map((e) => ({
+    id: e.id,
+    name: e.name,
+    date: e.date,
+    eventType: e.event_type,
+    category: e.event_type,
+    isMandatory: e.is_mandatory,
+  }));
 
   switch (widgetId) {
     case "quick-actions":
@@ -77,7 +59,7 @@ export function renderWidgetContent(
           orgSlug={org.slug}
           orgName={org.name}
           settings={settings}
-          events={events}
+          events={data.events}
           context={quickActions.context}
           accentColor={accentColor}
           actions={quickActions.actions}
@@ -89,25 +71,55 @@ export function renderWidgetContent(
     case "calendar":
       return (
         <CalendarWidget
-          events={events.map((e) => ({ id: e.id, title: e.name, date: e.date }))}
+          events={data.events.map((e) => ({
+            id: e.id,
+            title: e.name,
+            date: e.date,
+            // Committee-only events show which committees they're for.
+            tag: committeeLabel(e.committee_ids, committees),
+          }))}
           accentColor={accentColor}
-          onEventClick={onEditEvent}
+          onEventClick={ctx.onEditEvent}
         />
       );
-    case "points":
+    case "club-progress":
       return <PointsWidget settings={settings} earnedByCategory={{}} accentColor={accentColor} />;
+    case "attendance":
+      return (
+        <AttendanceSummary
+          memberId="preview"
+          events={memberEvents}
+          attendance={[]}
+          absences={[]}
+          categories={categories}
+          accentColor={accentColor}
+        />
+      );
     case "profile":
-      return <ProfileWidget accentColor={accentColor} />;
+      return <ProfileWidget profile={data.viewer} accentColor={accentColor} />;
     case "strikes":
       return <StrikesWidget settings={settings} accentColor={accentColor} />;
     case "manage-members":
       return (
         <MemberManagementWidget
           orgName={org.name}
-          members={SAMPLE_MEMBERS}
+          members={data.members.map((m) => ({
+            id: m.id,
+            name: m.name,
+            email: m.email,
+            role: m.role,
+            committee: m.committee,
+            major: m.major,
+            year: m.year,
+            college: m.college,
+            activeStrikes: m.activeStrikes,
+            joinedAt: m.joinedAt,
+          }))}
           events={memberEvents}
-          attendance={SAMPLE_ATTENDANCE}
-          categories={settings?.categories?.map((c) => ({ name: c.name, mandatory: c.is_mandatory }))}
+          attendance={data.attendance}
+          absences={data.absences}
+          categories={categories}
+          committees={committees.map((c) => c.name)}
           accentColor={accentColor}
           onChangeRole={async (id, role) => console.log("change role", id, role)}
           onDeactivate={async (id) => console.log("deactivate", id)}
@@ -118,18 +130,14 @@ export function renderWidgetContent(
         <QuickStatsWidget
           org={org}
           settings={settings}
-          events={events}
-          memberCount={SAMPLE_MEMBERS.length}
+          events={data.events}
+          memberCount={data.members.length}
           accentColor={accentColor}
         />
       );
     case "pending-absences":
       return (
-        <PendingAbsencesWidget
-          orgSlug={org.slug}
-          accentColor={accentColor}
-          onOpenReview={onOpenAbsenceReview}
-        />
+        <PendingAbsencesWidget orgSlug={org.slug} accentColor={accentColor} onOpenReview={ctx.onOpenAbsenceReview} />
       );
     case "org-info":
       return <OrgInfoWidget org={org} settings={settings} accentColor={accentColor} />;

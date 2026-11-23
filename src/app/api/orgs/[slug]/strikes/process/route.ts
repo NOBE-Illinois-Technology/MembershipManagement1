@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { describeDbError, errorResponse, getOrgMembers, HttpError, requireOrgAdminContext } from "@/lib/orgAdminData";
 import { sendOrgEmails } from "@/lib/orgEmail";
+import { isMissingSchema } from "@/lib/orgDashboardData";
 
 // Process Strikes quick action, modeled on NOBE's /api/admin/process-strikes but scoped to one org:
 // for each of the org's mandatory events whose check-in has closed and that hasn't been processed,
-// every member of the org who didn't check in and has no approved absence gets a strike.
+// every member of the org who didn't check in and has no approved absence gets a strike. For a
+// committee-only event (event_committees), only members of those committees can get one.
 //
 // Differences from NOBE: only this org's events and members; only when the org has strikes turned
 // on; doesn't touch people.strikes (NOBE's own counter); emails go through Resend.
@@ -32,6 +34,17 @@ export async function POST(_request: NextRequest, { params }: Params) {
     }
 
     const members = await getOrgMembers(admin, org.id);
+
+    // Committee-only events: only those committees' members can miss them.
+    const { data: links, error: linksError } = await admin
+      .from("event_committees")
+      .select("event_id, committee_id")
+      .in("event_id", events.map((e) => e.id));
+    if (linksError && !isMissingSchema(linksError)) throw new Error(`Could not load event committees: ${linksError.message}`);
+    const committeesByEvent = new Map<string, number[]>();
+    for (const l of links ?? []) {
+      committeesByEvent.set(l.event_id, [...(committeesByEvent.get(l.event_id) ?? []), Number(l.committee_id)]);
+    }
     const results: { event: string; struckCount: number }[] = [];
     const struckMemberIds = new Set<string>();
     const struckEventsByMember = new Map<string, string[]>();
@@ -61,7 +74,11 @@ export async function POST(_request: NextRequest, { params }: Params) {
       const skip = new Set(
         [...(attendance.data ?? []), ...(absences.data ?? []), ...(existing.data ?? [])].map((r) => r.user_id as string)
       );
-      const missed = members.filter((m) => !skip.has(m.authId));
+      const eventCommittees = committeesByEvent.get(event.id as string) ?? [];
+      const expected = members.filter(
+        (m) => eventCommittees.length === 0 || (m.committeeId !== null && eventCommittees.includes(m.committeeId))
+      );
+      const missed = expected.filter((m) => !skip.has(m.authId));
 
       if (missed.length > 0) {
         const { error: insertError } = await admin.from("strikes").insert(
