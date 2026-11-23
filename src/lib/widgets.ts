@@ -1,4 +1,5 @@
 import type { OrgSettings } from "./orgSettings";
+import type { QuickActionId } from "./quickActions";
 import { QUICK_ACTIONS } from "./quickActions";
 
 export type WidgetId =
@@ -43,7 +44,7 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     getParamSummary: (settings) => {
       const total = settings?.total_points_required ?? 0;
       const count = settings?.categories?.length ?? 0;
-      return `${total > 0 ? `${total} pts required` : "No point minimum"} • ${count} ${count === 1 ? "category" : "categories"}`;
+      return `${total > 0 ? `${total} pts required` : "No point minimum"}, ${count} ${count === 1 ? "category" : "categories"}`;
     },
   },
   {
@@ -86,11 +87,11 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     id: "quick-stats",
     title: "Admin Overview",
     badge: "Admin",
-    description: "Key organization indicators and overview metrics.",
+    description: "Key organization indicators, member count, and overview metrics.",
     targetView: "admin",
     colSpan: 2,
     getParamSummary: (settings) =>
-      `${settings?.categories?.length ?? 0} point types • ${settings?.committees?.length ?? 0} committees`,
+      `${settings?.categories?.length ?? 0} point types, ${settings?.committees?.length ?? 0} committees`,
   },
   {
     id: "manage-members",
@@ -105,11 +106,11 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     id: "quick-actions",
     title: "Quick Actions",
     badge: "Admin",
-    description: "Shortcut buttons for admin tasks. Drag this card for an empty widget, or drag one button below to start with it.",
+    description: "Shortcut buttons for admin tasks like creating events, emailing members, reviewing absences, and processing strikes.",
     targetView: "admin",
     colSpan: 1,
     getParamSummary: (settings) =>
-      `${QUICK_ACTIONS.length} buttons • Strikes ${settings?.strikes_enabled ? "on" : "off in Settings"}`,
+      `${QUICK_ACTIONS.length} buttons, Strikes ${settings?.strikes_enabled ? "on" : "off in Settings"}`,
   },
   {
     id: "pending-absences",
@@ -128,13 +129,33 @@ export const ALL_WIDGETS: WidgetDefinition[] = [
     targetView: "both",
     colSpan: 1,
     getParamSummary: (settings) =>
-      `Primary: ${settings?.primary_color ?? "#5b8def"}${settings?.secondary_color ? ` • Sec: ${settings.secondary_color}` : ""}`,
+      `Primary: ${settings?.primary_color ?? "#5b8def"}${settings?.secondary_color ? `, Sec: ${settings.secondary_color}` : ""}`,
   },
 ];
 
-// No start template by default — users build their dashboard via drag & drop
-export const DEFAULT_ADMIN_WIDGETS: WidgetId[] = [];
-export const DEFAULT_MEMBER_WIDGETS: WidgetId[] = [];
+// Recommended cohesive default layout for true admin and member views
+export const DEFAULT_ADMIN_WIDGETS: WidgetId[] = [
+  "quick-actions",
+  "calendar",
+  "manage-members",
+  "points",
+  "strikes",
+  "profile",
+];
+
+export const DEFAULT_MEMBER_WIDGETS: WidgetId[] = [
+  "calendar",
+  "points",
+  "profile",
+  "strikes",
+];
+
+export const DEFAULT_QUICK_ACTIONS: QuickActionId[] = [
+  "create-event",
+  "email-members",
+  "strikes",
+  "absence-review",
+];
 
 /**
  * Populates the list of available widgets based on Nadia's org settings parameters

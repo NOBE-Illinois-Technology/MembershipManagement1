@@ -74,7 +74,7 @@ export default function StrikesPanel({ orgSlug, settings, accentColor, mandatory
           <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#334155" }}>
             {mandatoryEvents.map((e) => (
               <li key={e.id}>
-                {e.name} — {formatDate(e.date)}
+                {e.name} ({formatDate(e.date)})
               </li>
             ))}
           </ul>

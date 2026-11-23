@@ -17,7 +17,7 @@ type AbsenceReviewPanelProps = {
 type FormState = { status: "APPROVED" | "DENIED"; response: string; submitting: boolean; error: string };
 
 const formatDate = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
+  iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "None";
 
 export default function AbsenceReviewPanel({ orgSlug, accentColor }: AbsenceReviewPanelProps) {
   const [rows, setRows] = useState<AbsenceRequest[] | null>(null);
