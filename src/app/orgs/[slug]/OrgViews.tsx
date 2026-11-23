@@ -12,6 +12,15 @@ import {
   type WidgetId,
 } from "@/lib/widgets";
 import WidgetTemplate from "./WidgetTemplate";
+import CalendarWidget from "./widgets/CalendarWidget";
+import PointsWidget from "./widgets/PointsWidget";
+import AttendanceSummary from "./widgets/AttendanceSummary";
+import ProfileWidget from "./widgets/ProfileWidget";
+import StrikesWidget from "./widgets/StrikesWidget";
+import MemberManagementWidget from "./widgets/MemberManagementWidget";
+import QuickActionsWidget from "./widgets/QuickActionsWidget";
+import QuickActionModal from "./widgets/quickActions/QuickActionModal";
+import CreateEventPanel from "./widgets/quickActions/CreateEventPanel";
 import QuickActionModal from "./_widgets/quickActions/QuickActionModal";
 import CreateEventPanel from "./_widgets/quickActions/CreateEventPanel";
 import AbsenceReviewPanel from "./_widgets/quickActions/AbsenceReviewPanel";
@@ -24,6 +33,132 @@ import type { OrgEventRow } from "@/lib/orgEvents";
 import { renderWidgetContent, type QuickActionsState } from "./_widgets/WidgetRenderer";
 
 type View = "admin" | "member";
+
+// Quick action buttons may only be dropped inside the Quick Actions widget, never on the dashboard.
+const isQuickActionDrag = (e: React.DragEvent) => e.dataTransfer.types.includes(QUICK_ACTION_DRAG_TYPE);
+
+type QuickActionsState = {
+  actions: QuickActionId[];
+  context: QuickActionContext;
+  isCustomizing: boolean;
+  onAdd: (id: QuickActionId) => void;
+  onRemove: (id: QuickActionId) => void;
+};
+
+const SAMPLE_MEMBERS = [
+  { id: "1", name: "Risha Bansal", email: "rishab5@illinois.edu", role: "ADMIN", committee: "Technology", major: "CS", year: "2029", college: "Grainger", totalPoints: 6, activeStrikes: 0, joinedAt: "2026-07-01" },
+  { id: "2", name: "Srikriti Mutyala", email: "mutyala3@illinois.edu", role: "ADMIN", committee: "Technology", major: "CS+Statistics", year: "2029", college: "Grainger", totalPoints: 1, activeStrikes: 1, joinedAt: "2026-08-20" },
+  { id: "3", name: "Vinay Nair", email: "vinayn5@illinois.edu", role: "MEMBER", committee: "Technology", totalPoints: 0, activeStrikes: 0, joinedAt: "2026-01-10" },
+  { id: "4", name: "Nadia Shastri", email: "nadiaks2@illinois.edu", role: "MEMBER", committee: "Technology", totalPoints: 0, activeStrikes: 0, joinedAt: "2026-01-11" },
+];
+
+const SAMPLE_EVENTS = [
+  { id: "e1", name: "Semi Formal", date: "2026-11-11", eventType: "social", category: "Social" },
+  { id: "e2", name: "Slime Social", date: "2026-11-10", eventType: "social", category: "Social" },
+  { id: "e3", name: "Investment 101 Workshop", date: "2026-11-05", eventType: "professional", category: "Professional" },
+  { id: "e4", name: "Literary Bookmarks with MBSA", date: "2026-11-03", eventType: "service", category: "Service" },
+];
+
+const SAMPLE_CATEGORIES = [
+  { name: "Professional", mandatory: true },
+  { name: "Social" },
+  { name: "Service" },
+];
+
+const SAMPLE_ATTENDANCE = [
+  // Risha: 3 of 4
+  { memberId: "1", eventId: "e2", checkedInAt: "2026-11-10T17:53:00" },
+  { memberId: "1", eventId: "e3", checkedInAt: "2026-11-05T18:05:00" },
+  { memberId: "1", eventId: "e4", checkedInAt: "2026-11-03T16:30:00" },
+  // Srikriti: 2 of 4
+  { memberId: "2", eventId: "e3", checkedInAt: "2026-11-05T18:02:00" },
+  { memberId: "2", eventId: "e1", checkedInAt: "2026-11-11T20:10:00" },
+  // Vinay: 2 of 4
+  { memberId: "3", eventId: "e1", checkedInAt: "2026-11-11T20:15:00" },
+  { memberId: "3", eventId: "e2", checkedInAt: "2026-11-10T17:48:00" },
+  // Nadia: 1 of 4
+  { memberId: "4", eventId: "e4", checkedInAt: "2026-11-03T16:42:00" },
+];
+
+// The calendar and quick actions use the org's real events; member-specific data (points,
+// attendance, roster) isn't loaded per org yet, so those widgets still use sample data.
+function renderWidgetContent(
+  widgetId: WidgetId,
+  org: Org,
+  settings: OrgSettings | null | undefined,
+  events: OrgEventRow[],
+  quickActions: QuickActionsState,
+  // Admin view only: clicking an event on the Calendar opens it for editing.
+  onEditEvent?: (eventId: string) => void
+) {
+  const accentColor = settings?.primary_color ?? org.primary_color;
+  switch (widgetId) {
+    case "quick-actions":
+      return (
+        <QuickActionsWidget
+          orgSlug={org.slug}
+          orgName={org.name}
+          settings={settings}
+          events={events}
+          context={quickActions.context}
+          accentColor={accentColor}
+          actions={quickActions.actions}
+          isCustomizing={quickActions.isCustomizing}
+          onAddAction={quickActions.onAdd}
+          onRemoveAction={quickActions.onRemove}
+        />
+      );
+    case "calendar":
+      return (
+        <CalendarWidget
+          events={events.map((e) => ({ id: e.id, title: e.name, date: e.date }))}
+          accentColor={accentColor}
+          onEventClick={onEditEvent}
+        />
+      );
+    case "club-progress":
+      return <PointsWidget settings={settings} earnedByCategory={{}} accentColor={accentColor} />;
+    case "attendance":
+      return (
+        <AttendanceSummary
+          memberId="preview"
+          events={events.map((event) => ({
+            id: event.id,
+            name: event.name,
+            date: event.date,
+            category: event.event_type,
+            isMandatory: event.is_mandatory,
+          }))}
+          attendance={[]}
+          absences={[]}
+          categories={settings?.categories?.map((category) => ({
+            name: category.name,
+            mandatory: category.is_mandatory,
+          }))}
+          accentColor={accentColor}
+        />
+      );
+    case "profile":
+      return <ProfileWidget accentColor={accentColor} />;
+    case "strikes":
+      return <StrikesWidget settings={settings} accentColor={accentColor} />;
+    case "manage-members":
+      return (
+        <MemberManagementWidget
+          orgName={org.name}
+          members={SAMPLE_MEMBERS}
+          events={SAMPLE_EVENTS}
+          attendance={SAMPLE_ATTENDANCE}
+          categories={settings?.categories?.map((c) => ({ name: c.name, mandatory: c.mandatory }))}
+          accentColor={accentColor}
+          onChangeRole={async (id, role) => console.log("change role", id, role)}
+          onDeactivate={async (id) => console.log("deactivate", id)}
+        />
+      );
+    default:
+      return undefined;
+  }
+}
 
 export default function OrgViews({
   org,
