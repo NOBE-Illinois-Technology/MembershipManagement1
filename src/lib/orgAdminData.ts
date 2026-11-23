@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/app/(NOBEDevOps)/utils/supabase/admin";
 import { getSignedInUser, getOrgRole } from "@/lib/membership";
+import { isMissingSchema } from "@/lib/orgDashboardData";
 
 // Server-only helpers for the org dashboard's admin routes (Quick Actions). Everything here uses
 // the service-role client, so routes must call requireOrgAdminContext first.
@@ -23,7 +24,8 @@ export type OrgRow = {
   max_strikes: number | null;
 };
 
-export type OrgMember = { authId: string; name: string; email: string | null };
+// committeeId is null for members without a committee (or before memberships.committee_id exists).
+export type OrgMember = { authId: string; name: string; email: string | null; committeeId: number | null };
 
 export type AdminContext = {
   user: User;
@@ -54,21 +56,30 @@ export async function requireOrgAdminContext(slug: string): Promise<AdminContext
 // Members who have never signed in have no auth_id and are left out, since attendance,
 // absences and strikes are all keyed by auth_id.
 export async function getOrgMembers(admin: AdminContext["admin"], orgId: number): Promise<OrgMember[]> {
-  const { data, error } = await admin
-    .from("memberships")
-    .select("people!inner(auth_id, name, illinois_email)")
-    .eq("org_id", orgId);
+  const select = (withCommittee: boolean) =>
+    admin
+      .from("memberships")
+      .select(`${withCommittee ? "committee_id, " : ""}people!inner(auth_id, name, illinois_email)`)
+      .eq("org_id", orgId);
+  let { data, error } = await select(true);
+  // memberships.committee_id comes from a migration that may not have been run yet.
+  if (error && isMissingSchema(error)) ({ data, error } = await select(false));
   if (error) throw new Error(`Could not load members: ${error.message}`);
 
   const members = new Map<string, OrgMember>();
-  for (const row of data ?? []) {
+  for (const row of (data ?? []) as unknown as { committee_id?: number | null; people: unknown }[]) {
     // A to-one join; Supabase's generated types may describe it as an array.
     const person = (Array.isArray(row.people) ? row.people[0] : row.people) as
       | { auth_id: string | null; name: string | null; illinois_email: string | null }
       | undefined;
     if (!person?.auth_id) continue;
     const email = person.illinois_email?.trim().toLowerCase() || null;
-    members.set(person.auth_id, { authId: person.auth_id, name: person.name?.trim() || email || "Member", email });
+    members.set(person.auth_id, {
+      authId: person.auth_id,
+      name: person.name?.trim() || email || "Member",
+      email,
+      committeeId: row.committee_id != null ? Number(row.committee_id) : null,
+    });
   }
   return [...members.values()];
 }

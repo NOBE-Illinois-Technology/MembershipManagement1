@@ -46,12 +46,15 @@ type FormState = {
   has_check_in_window: boolean;
   check_in_start_offset_minutes: string;
   check_in_end_offset_minutes: string;
+  // Who the event is for. Only offered when the org has committees.
+  audience: "all" | "committees";
+  committee_ids: number[];
 };
 
 // The form's fields for an existing event. Like NOBE, the table has no end-time column, so the end
 // time is read from check_in_ends_at: exact for the default window (check-in runs start to end),
 // and the check-in end time for events with a custom window.
-function formFromEvent(e: OrgEventRow): FormState {
+function formFromEvent(e: OrgEventRow, committeeIds: number[]): FormState {
   const start = new Date(e.date);
   const checkInStart = e.check_in_starts_at ? new Date(e.check_in_starts_at) : start;
   const checkInEnd = e.check_in_ends_at ? new Date(e.check_in_ends_at) : new Date(start.getTime() + 60 * 60_000);
@@ -71,6 +74,9 @@ function formFromEvent(e: OrgEventRow): FormState {
     has_check_in_window: custom,
     check_in_start_offset_minutes: custom ? minutesFromStart(checkInStart) : "0",
     check_in_end_offset_minutes: custom ? minutesFromStart(checkInEnd) : "30",
+    // Committees removed from Settings since are dropped.
+    audience: e.committee_ids.some((id) => committeeIds.includes(id)) ? "committees" : "all",
+    committee_ids: e.committee_ids.filter((id) => committeeIds.includes(id)),
   };
 }
 
@@ -83,10 +89,13 @@ export default function CreateEventPanel({ orgSlug, settings, accentColor, exist
   const typeOptions = categories.length > 0 ? categories.map((c) => c.name) : [GENERAL_EVENT_TYPE];
   // Keep an edited event's type selectable even if that category was renamed or removed since.
   if (existing?.event_type && !typeOptions.includes(existing.event_type)) typeOptions.push(existing.event_type);
+  // The org's saved committees. Without any, every event is for all members and the choice is hidden.
+  const committees = (settings?.committees ?? []).filter((c): c is { id: number; name: string } => typeof c.id === "number");
+  const committeeIds = committees.map((c) => c.id);
 
   const [form, setForm] = useState<FormState>(() =>
     existing
-      ? formFromEvent(existing)
+      ? formFromEvent(existing, committeeIds)
       : {
           name: "",
           category: typeOptions[0],
@@ -101,6 +110,8 @@ export default function CreateEventPanel({ orgSlug, settings, accentColor, exist
           has_check_in_window: false,
           check_in_start_offset_minutes: "0",
           check_in_end_offset_minutes: "30",
+          audience: "all",
+          committee_ids: [],
         }
   );
   const [submitting, setSubmitting] = useState(false);
@@ -167,6 +178,8 @@ export default function CreateEventPanel({ orgSlug, settings, accentColor, exist
       ? "Check-in offsets must be whole numbers of minutes."
       : form.has_check_in_window && endOffset <= startOffset
       ? "The check-in window must end after it starts."
+      : form.audience === "committees" && form.committee_ids.length === 0
+      ? "Pick at least one committee, or make the event for all members."
       : null;
     if (problem) {
       setResult({ kind: "error", text: problem });
@@ -185,6 +198,7 @@ export default function CreateEventPanel({ orgSlug, settings, accentColor, exist
       description: form.description.trim(),
       check_in_start_offset_minutes: form.has_check_in_window ? startOffset : null,
       check_in_end_offset_minutes: form.has_check_in_window ? endOffset : null,
+      committee_ids: committees.length > 0 && form.audience === "committees" ? form.committee_ids : [],
     };
 
     setSubmitting(true);
@@ -220,8 +234,8 @@ export default function CreateEventPanel({ orgSlug, settings, accentColor, exist
     <form onSubmit={handleSubmit} style={{ display: "grid", gap: "14px" }}>
       {timesLocked && (
         <div style={s.noticeMessage}>
-          Strikes were already given out for this event, so its date, times, check-in window, and mandatory setting
-          can&apos;t be changed. You can still edit the other details or delete it.
+          Strikes were already given out for this event, so its date, times, check-in window, mandatory setting,
+          and committees can&apos;t be changed. You can still edit the other details or delete it.
         </div>
       )}
       <div style={s.fieldGroup}>
@@ -247,6 +261,72 @@ export default function CreateEventPanel({ orgSlug, settings, accentColor, exist
           </select>
         </div>
       </div>
+
+      {committees.length > 0 && (
+        <fieldset style={{ ...s.fieldGroup, border: 0, padding: 0, margin: 0 }}>
+          <legend style={{ ...s.label, marginBottom: "6px" }}>Who is this event for?</legend>
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+            {(["all", "committees"] as const).map((audience) => (
+              <label
+                key={audience}
+                style={{ ...s.label, fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", cursor: timesLocked ? "not-allowed" : "pointer" }}
+              >
+                <input
+                  type="radio"
+                  name="qa-event-audience"
+                  checked={form.audience === audience}
+                  disabled={timesLocked}
+                  onChange={() => set("audience", audience)}
+                />
+                {audience === "all" ? "All members" : "Specific committees"}
+              </label>
+            ))}
+          </div>
+          {form.audience === "committees" && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
+              {committees.map((c) => {
+                const checked = form.committee_ids.includes(c.id);
+                return (
+                  <label
+                    key={c.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 10px",
+                      borderRadius: "999px",
+                      border: `1px solid ${checked ? accentColor : "#CBD5E1"}`,
+                      background: checked ? `${accentColor}14` : "white",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#0F172A",
+                      cursor: timesLocked ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={timesLocked}
+                      onChange={(e) =>
+                        set(
+                          "committee_ids",
+                          e.target.checked ? [...form.committee_ids, c.id] : form.committee_ids.filter((id) => id !== c.id)
+                        )
+                      }
+                    />
+                    {c.name}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          <p style={s.hint}>
+            {form.audience === "committees"
+              ? "Only members of the selected committees will see this event. If it's mandatory, only they can get strikes for missing it."
+              : "Every member will see this event."}
+          </p>
+        </fieldset>
+      )}
 
       <div style={s.twoUp}>
         <div style={s.fieldGroup}>

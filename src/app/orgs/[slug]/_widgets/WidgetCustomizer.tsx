@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Org } from "@/app/Layer3/orgs";
 import type { OrgSettings } from "@/lib/orgSettings";
-import type { OrgEventRow } from "@/lib/orgEvents";
+import type { OrgDashboardData } from "@/lib/orgDashboard";
 import {
   ALL_WIDGETS,
   DEFAULT_ADMIN_WIDGETS,
   DEFAULT_MEMBER_WIDGETS,
   DEFAULT_QUICK_ACTIONS,
   getAvailableWidgets,
+  normalizeWidgetIds,
+  type WidgetDefinition,
   type WidgetId,
 } from "@/lib/widgets";
 import {
@@ -28,21 +30,28 @@ import { renderWidgetContent, type QuickActionsState } from "./WidgetRenderer";
 type View = "admin" | "member";
 type Mode = "edit" | "preview";
 
+// What's being dragged: a widget from the side panel, or a placed widget being moved.
+type Drag = { kind: "new"; id: WidgetId } | { kind: "move"; from: number };
+
+// The drag-and-drop data type for a widget from the side panel.
+const WIDGET_DRAG_TYPE = "application/widget-id";
+
 export default function WidgetCustomizer({
   org,
   settings,
-  events = [],
+  data,
 }: {
   org: Org;
   settings?: OrgSettings | null;
-  events?: OrgEventRow[];
+  // Real org data from the page, so widgets look the same as on the dashboard.
+  data: OrgDashboardData;
 }) {
   const router = useRouter();
   const accentColor = settings?.primary_color ?? org.primary_color ?? "#2563EB";
 
   const quickActionContext: QuickActionContext = {
     settings,
-    hasMandatoryEvents: events.some((e) => e.is_mandatory),
+    hasMandatoryEvents: data.events.some((e) => e.is_mandatory),
   };
 
   const [view, setView] = useState<View>("admin");
@@ -54,8 +63,10 @@ export default function WidgetCustomizer({
   const [memberWidgets, setMemberWidgets] = useState<WidgetId[]>(DEFAULT_MEMBER_WIDGETS);
   const [quickActions, setQuickActions] = useState<QuickActionId[]>(DEFAULT_QUICK_ACTIONS);
 
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
+  const [drag, setDrag] = useState<Drag | null>(null);
+  // Where the dragged widget would be inserted (0..activeWidgets.length), shown as a placeholder.
+  const [insertAt, setInsertAt] = useState<number | null>(null);
+  const [isOverPanel, setIsOverPanel] = useState(false);
 
   const [feedback, setFeedback] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
@@ -71,12 +82,14 @@ export default function WidgetCustomizer({
       const savedAdmin = localStorage.getItem(adminKey);
       if (savedAdmin) {
         const parsed = JSON.parse(savedAdmin);
-        if (Array.isArray(parsed) && parsed.length > 0) setAdminWidgets(parsed);
+        const ids = normalizeWidgetIds(parsed);
+        if (ids.length > 0) setAdminWidgets(ids);
       }
       const savedMember = localStorage.getItem(memberKey);
       if (savedMember) {
         const parsed = JSON.parse(savedMember);
-        if (Array.isArray(parsed) && parsed.length > 0) setMemberWidgets(parsed);
+        const ids = normalizeWidgetIds(parsed);
+        if (ids.length > 0) setMemberWidgets(ids);
       }
       const savedQuickActions = localStorage.getItem(quickActionsKey);
       if (savedQuickActions) {
@@ -96,7 +109,9 @@ export default function WidgetCustomizer({
   }
 
   const activeWidgets = view === "admin" ? adminWidgets : memberWidgets;
-  const availableWidgets = getAvailableWidgets(settings, view);
+  // Widgets that can still be added: placed widgets leave the side panel (and the Add list) and
+  // come back when they're removed.
+  const unplacedWidgets = getAvailableWidgets(settings, view).filter((w) => !activeWidgets.includes(w.id));
 
   function updateActiveWidgets(newList: WidgetId[]) {
     if (view === "admin") {
@@ -107,12 +122,14 @@ export default function WidgetCustomizer({
     setHasUnsavedChanges(true);
   }
 
-  function addWidget(widgetId: WidgetId) {
+  function addWidget(widgetId: WidgetId, at: number = activeWidgets.length) {
     if (activeWidgets.includes(widgetId)) {
       showFeedback("Widget is already placed on layout");
       return;
     }
-    updateActiveWidgets([...activeWidgets, widgetId]);
+    const list = [...activeWidgets];
+    list.splice(Math.min(Math.max(at, 0), list.length), 0, widgetId);
+    updateActiveWidgets(list);
     const def = ALL_WIDGETS.find((w) => w.id === widgetId);
     showFeedback(`Added ${def?.title || widgetId}`);
   }
@@ -133,6 +150,53 @@ export default function WidgetCustomizer({
     const [moved] = list.splice(fromIndex, 1);
     list.splice(toIndex, 0, moved);
     updateActiveWidgets(list);
+  }
+
+  // Moves a placed widget so it lands where the placeholder was (an insert position in the
+  // current list, counted before the widget is taken out).
+  function moveWidgetToInsert(from: number, at: number) {
+    const to = at > from ? at - 1 : at;
+    if (to === from) return;
+    const list = [...activeWidgets];
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    updateActiveWidgets(list);
+  }
+
+  function endDrag() {
+    setDrag(null);
+    setInsertAt(null);
+    setIsOverPanel(false);
+  }
+
+  // Whether dropping at `at` would change anything (moving a widget next to itself doesn't).
+  function isUsefulInsert(at: number) {
+    return !(drag?.kind === "move" && (at === drag.from || at === drag.from + 1));
+  }
+
+  function updateInsertAt(at: number) {
+    const next = isUsefulInsert(at) ? at : null;
+    if (next !== insertAt) setInsertAt(next);
+  }
+
+  // Before or after the card under the pointer: left/right halves for side-by-side cards,
+  // top/bottom halves for cards that fill the row.
+  function insertPositionFor(e: React.DragEvent<HTMLElement>, index: number) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const rowWidth = e.currentTarget.parentElement?.getBoundingClientRect().width ?? rect.width;
+    const fillsRow = rect.width > rowWidth * 0.6;
+    const after = fillsRow ? e.clientY > rect.top + rect.height / 2 : e.clientX > rect.left + rect.width / 2;
+    return after ? index + 1 : index;
+  }
+
+  function commitDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const at = insertAt;
+    const current = drag;
+    endDrag();
+    if (at === null || !current) return;
+    if (current.kind === "new") addWidget(current.id, at);
+    else moveWidgetToInsert(current.from, at);
   }
 
   function resetToDefaults() {
@@ -173,6 +237,48 @@ export default function WidgetCustomizer({
       setHasUnsavedChanges(true);
     },
   };
+
+  // Dashed box showing where the dragged widget will land, sized like that widget.
+  function placeholder(at: number) {
+    const def: WidgetDefinition | undefined =
+      drag?.kind === "new"
+        ? ALL_WIDGETS.find((w) => w.id === drag.id)
+        : drag?.kind === "move"
+        ? ALL_WIDGETS.find((w) => w.id === activeWidgets[drag.from])
+        : undefined;
+    return (
+      <div
+        key="drop-placeholder"
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDrop={(e) => {
+          e.stopPropagation();
+          commitDrop(e);
+        }}
+        style={{
+          gridColumn: def?.colSpan && def.colSpan > 1 ? "span 2" : "span 1",
+          minHeight: "140px",
+          border: `2px dashed ${accentColor}`,
+          borderRadius: "12px",
+          background: `${accentColor}0d`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: accentColor,
+          fontSize: "13px",
+          fontWeight: 700,
+          textAlign: "center",
+          padding: "12px",
+        }}
+        aria-hidden="true"
+        data-insert-at={at}
+      >
+        {def ? `${def.title} goes here` : "Drop here"}
+      </div>
+    );
+  }
 
   function saveAndExit() {
     setIsSaving(true);
@@ -432,7 +538,7 @@ export default function WidgetCustomizer({
                       isDropTarget={false}
                       isCustomizing={false}
                     >
-                      {renderWidgetContent(widgetId, org, settings, events, quickActionsState)}
+                      {renderWidgetContent(widgetId, { org, settings, data, quickActions: quickActionsState })}
                     </WidgetTemplate>
                   </div>
                 );
@@ -510,9 +616,28 @@ export default function WidgetCustomizer({
             </div>
           </div>
 
+          <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+          <div
+            style={{ flex: 1, minWidth: 0 }}
+            onDragLeave={(e) => {
+              // Left the canvas entirely (not just moved between cards): hide the placeholder.
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setInsertAt(null);
+            }}
+          >
           {/* Empty Canvas */}
           {activeWidgets.length === 0 ? (
-            <div style={emptyBoxStyle}>
+            <div
+              style={{
+                ...emptyBoxStyle,
+                ...(drag && insertAt === 0 ? { border: `2px dashed ${accentColor}`, background: `${accentColor}0d` } : {}),
+              }}
+              onDragOver={(e) => {
+                if (!drag) return;
+                e.preventDefault();
+                updateInsertAt(0);
+              }}
+              onDrop={commitDrop}
+            >
               <h3 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 700, color: "#111827" }}>
                 No widgets placed
               </h3>
@@ -541,8 +666,21 @@ export default function WidgetCustomizer({
             </div>
           ) : (
             /* REAL / RAW FORM WIDGETS WITH DRAG-AND-DROP REORDERING */
-            <div style={gridStyle}>
-              {activeWidgets.map((widgetId, index) => {
+            <div
+              style={gridStyle}
+              onDragOver={(e) => {
+                if (!drag) return;
+                e.preventDefault();
+                // Over the grid itself, not a card: only the space below the last card means "drop
+                // at the end". The gaps between cards keep the current position, so crossing one
+                // mid-drag doesn't make the placeholder jump.
+                if (e.target !== e.currentTarget) return;
+                const last = e.currentTarget.lastElementChild?.getBoundingClientRect();
+                if (last && e.clientY > last.bottom) updateInsertAt(activeWidgets.length);
+              }}
+              onDrop={commitDrop}
+            >
+              {activeWidgets.flatMap((widgetId, index) => {
                 const def = ALL_WIDGETS.find((w) => w.id === widgetId) ?? {
                   id: widgetId,
                   title: widgetId,
@@ -553,37 +691,28 @@ export default function WidgetCustomizer({
                   getParamSummary: () => "",
                 };
 
-                const isDraggingThis = draggingIndex === index;
-                const isDropTarget = dropTargetIndex === index;
+                const isDraggingThis = drag?.kind === "move" && drag.from === index;
 
-                return (
+                const card = (
                   <div
                     key={`${widgetId}-${index}`}
                     draggable
                     onDragStart={(e) => {
-                      setDraggingIndex(index);
+                      setDrag({ kind: "move", from: index });
                       e.dataTransfer.setData("text/plain", String(index));
                       e.dataTransfer.effectAllowed = "move";
                     }}
                     onDragOver={(e) => {
+                      if (!drag) return;
                       e.preventDefault();
-                      setDropTargetIndex(index);
-                    }}
-                    onDragLeave={() => {
-                      if (dropTargetIndex === index) setDropTargetIndex(null);
+                      e.stopPropagation();
+                      updateInsertAt(insertPositionFor(e, index));
                     }}
                     onDrop={(e) => {
-                      e.preventDefault();
-                      setDropTargetIndex(null);
-                      if (draggingIndex !== null && draggingIndex !== index) {
-                        moveWidget(draggingIndex, index);
-                      }
-                      setDraggingIndex(null);
+                      e.stopPropagation();
+                      commitDrop(e);
                     }}
-                    onDragEnd={() => {
-                      setDraggingIndex(null);
-                      setDropTargetIndex(null);
-                    }}
+                    onDragEnd={endDrag}
                     style={{
                       gridColumn: def.colSpan && def.colSpan > 1 ? "span 2" : "span 1",
                       cursor: "grab",
@@ -592,7 +721,7 @@ export default function WidgetCustomizer({
                     <WidgetTemplate
                       widget={def}
                       isDragging={isDraggingThis}
-                      isDropTarget={isDropTarget}
+                      isDropTarget={false}
                       isCustomizing={true}
                       canMoveUp={index > 0}
                       canMoveDown={index < activeWidgets.length - 1}
@@ -600,13 +729,93 @@ export default function WidgetCustomizer({
                       onMoveDown={() => moveWidget(index, index + 1)}
                       onRemove={() => removeWidget(index)}
                     >
-                      {renderWidgetContent(widgetId, org, settings, events, quickActionsState)}
+                      {renderWidgetContent(widgetId, { org, settings, data, quickActions: quickActionsState })}
                     </WidgetTemplate>
                   </div>
                 );
+
+                // The placeholder goes before the card it would push over.
+                return insertAt === index ? [placeholder(index), card] : [card];
               })}
+              {insertAt === activeWidgets.length && placeholder(activeWidgets.length)}
             </div>
           )}
+          </div>
+
+          {/* Side panel: drag a widget onto the layout; drag a placed widget back here to remove it */}
+          <aside
+            style={{
+              ...sidePanelStyle,
+              ...(isOverPanel ? { border: "2px dashed #DC2626", background: "#FEF2F2" } : {}),
+            }}
+            aria-label="Available widgets"
+            onDragOver={(e) => {
+              if (drag?.kind !== "move") return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              setInsertAt(null);
+              if (!isOverPanel) setIsOverPanel(true);
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsOverPanel(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const current = drag;
+              endDrag();
+              if (current?.kind === "move") removeWidget(current.from);
+            }}
+          >
+            <div style={{ marginBottom: "10px" }}>
+              <h3 style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#111827" }}>Widgets</h3>
+              <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#6B7280" }}>
+                {isOverPanel
+                  ? "Drop here to remove it from the layout."
+                  : "Drag a widget onto the layout. Placed widgets leave this list."}
+              </p>
+            </div>
+            {unplacedWidgets.length === 0 ? (
+              <p style={{ margin: 0, padding: "16px 8px", fontSize: "12px", color: "#6B7280", textAlign: "center" }}>
+                Every widget is on this layout. Remove one to bring it back here.
+              </p>
+            ) : (
+              <div style={{ display: "grid", gap: "8px" }}>
+                {unplacedWidgets.map((widget) => (
+                  <div
+                    key={widget.id}
+                    draggable
+                    onDragStart={(e) => {
+                      setDrag({ kind: "new", id: widget.id });
+                      e.dataTransfer.setData(WIDGET_DRAG_TYPE, widget.id);
+                      e.dataTransfer.effectAllowed = "copy";
+                    }}
+                    onDragEnd={endDrag}
+                    style={{
+                      ...panelCardStyle,
+                      opacity: drag?.kind === "new" && drag.id === widget.id ? 0.45 : 1,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                      <strong style={{ fontSize: "13px", color: "#111827" }}>{widget.title}</strong>
+                      <button
+                        type="button"
+                        onClick={() => addWidget(widget.id)}
+                        aria-label={`Add ${widget.title} to the layout`}
+                        style={{ ...standardSecondaryButtonStyle, padding: "2px 8px", fontSize: "11px" }}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    <p style={{ margin: "3px 0 0", fontSize: "11px", color: "#4B5563", lineHeight: 1.4 }}>{widget.description}</p>
+                    <span style={{ display: "inline-block", marginTop: "4px", fontSize: "10px", color: "#6B7280" }}>
+                      {widget.colSpan === 2 ? "Full width" : "Half width"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </aside>
+          </div>
 
           {/* Bottom Action Row */}
           <div
@@ -676,9 +885,12 @@ export default function WidgetCustomizer({
           onClose={() => setIsAddModalOpen(false)}
         >
           <div style={{ display: "grid", gap: "8px", marginTop: "12px", maxHeight: "60vh", overflowY: "auto" }}>
-            {availableWidgets.map((widget) => {
-              const isPlaced = activeWidgets.includes(widget.id);
-
+            {unplacedWidgets.length === 0 && (
+              <p style={{ margin: 0, fontSize: "13px", color: "#4B5563" }}>
+                Every widget is already on this layout. Remove one to add it again.
+              </p>
+            )}
+            {unplacedWidgets.map((widget) => {
               return (
                 <div
                   key={widget.id}
@@ -688,7 +900,7 @@ export default function WidgetCustomizer({
                     justifyContent: "space-between",
                     padding: "10px 14px",
                     borderRadius: "4px",
-                    background: isPlaced ? "#F9FAFB" : "#FFFFFF",
+                    background: "#FFFFFF",
                     border: "1px solid #D1D5DB",
                   }}
                 >
@@ -710,12 +922,7 @@ export default function WidgetCustomizer({
                   </div>
 
                   <div style={{ marginLeft: "12px", flexShrink: 0 }}>
-                    {isPlaced ? (
-                      <span style={{ fontSize: "12px", color: "#059669", fontWeight: 600 }}>
-                        Placed
-                      </span>
-                    ) : (
-                      <button
+                    <button
                         type="button"
                         onClick={() => {
                           addWidget(widget.id);
@@ -734,7 +941,6 @@ export default function WidgetCustomizer({
                       >
                         + Add
                       </button>
-                    )}
                   </div>
                 </div>
               );
@@ -897,6 +1103,29 @@ const primaryButtonStyle: React.CSSProperties = {
   border: 0,
   borderRadius: "4px",
   cursor: "pointer",
+};
+
+const sidePanelStyle: React.CSSProperties = {
+  width: "280px",
+  flexShrink: 0,
+  position: "sticky",
+  top: "16px",
+  maxHeight: "calc(100vh - 32px)",
+  overflowY: "auto",
+  background: "#F9FAFB",
+  border: "1px solid #D1D5DB",
+  borderRadius: "6px",
+  padding: "12px",
+  boxSizing: "border-box",
+};
+
+const panelCardStyle: React.CSSProperties = {
+  padding: "10px 12px",
+  background: "#FFFFFF",
+  border: "1px solid #D1D5DB",
+  borderRadius: "6px",
+  cursor: "grab",
+  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
 };
 
 const gridStyle: React.CSSProperties = {

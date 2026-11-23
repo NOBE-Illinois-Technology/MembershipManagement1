@@ -138,14 +138,14 @@ export const DEFAULT_ADMIN_WIDGETS: WidgetId[] = [
   "quick-actions",
   "calendar",
   "manage-members",
-  "points",
+  "club-progress",
   "strikes",
   "profile",
 ];
 
 export const DEFAULT_MEMBER_WIDGETS: WidgetId[] = [
   "calendar",
-  "points",
+  "club-progress",
   "profile",
   "strikes",
 ];
@@ -156,6 +156,19 @@ export const DEFAULT_QUICK_ACTIONS: QuickActionId[] = [
   "strikes",
   "absence-review",
 ];
+
+// Saved layouts (localStorage) from before the "points" widget was renamed "club-progress" still
+// say "points"; map it over, and drop anything that's no longer a widget or appears twice.
+const RENAMED_WIDGETS: Record<string, WidgetId> = { points: "club-progress" };
+
+export function normalizeWidgetIds(list: unknown): WidgetId[] {
+  if (!Array.isArray(list)) return [];
+  const known = new Set<string>(ALL_WIDGETS.map((w) => w.id));
+  const ids = list
+    .map((id) => (typeof id === "string" ? RENAMED_WIDGETS[id] ?? id : null))
+    .filter((id): id is WidgetId => id !== null && known.has(id));
+  return [...new Set(ids)];
+}
 
 /**
  * Populates the list of available widgets based on Nadia's org settings parameters

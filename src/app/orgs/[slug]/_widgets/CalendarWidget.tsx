@@ -163,6 +163,7 @@ export default function CalendarWidget({ events = [], accentColor = "#3B82F6", o
                         <>
                           {time && <div className="calendar-event-time">{time}</div>}
                           <div className="calendar-event-name">{event.title}</div>
+                          {event.tag && <div className="calendar-event-tag">{event.tag}</div>}
                         </>
                       );
                       // Admins can click an event to edit or delete it.
@@ -171,13 +172,13 @@ export default function CalendarWidget({ events = [], accentColor = "#3B82F6", o
                           key={event.id}
                           type="button"
                           className="calendar-event calendar-event-button"
-                          title={`Edit or delete "${event.title}"`}
+                          title={`Edit or delete "${event.title}"${event.tag ? ` (${event.tag} only)` : ""}`}
                           onClick={() => onEventClick(event.id)}
                         >
                           {body}
                         </button>
                       ) : (
-                        <div key={event.id} className="calendar-event" title={event.title}>
+                        <div key={event.id} className="calendar-event" title={event.tag ? `${event.title} (${event.tag} only)` : event.title}>
                           {body}
                         </div>
                       );
@@ -390,6 +391,15 @@ export default function CalendarWidget({ events = [], accentColor = "#3B82F6", o
           font-size: 0.69rem;
           font-weight: 600;
           line-height: 1.3;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .calendar-event-tag {
+          margin-top: 1px;
+          color: #64748b;
+          font-size: 0.62rem;
+          font-weight: 600;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;

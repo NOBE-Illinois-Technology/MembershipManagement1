@@ -7,10 +7,12 @@ export type OrgEvent = {
   title: string;
   // ISO date or date-time string, e.g. "2026-11-12" or "2026-11-12T18:00:00Z".
   date: string;
+  // Short label shown on the event card, e.g. the committees a committee-only event is for.
+  tag?: string | null;
 };
 
-// An org event as the org page loads it (a subset of the events table).
-export type OrgEventRow = {
+// A row of the events table as selected with ORG_EVENT_COLUMNS.
+export type OrgEventDbRow = {
   id: string;
   name: string;
   date: string;
@@ -24,6 +26,24 @@ export type OrgEventRow = {
   check_in_ends_at: string | null;
   strikes_processed: boolean | null;
 };
+
+// An org event as the org pages use it: the table row plus the committees it's for
+// (event_committees). An empty list means the event is for all members.
+export type OrgEventRow = OrgEventDbRow & { committee_ids: number[] };
+
+// Whether someone in committee `committeeId` (null = no committee) should see this event.
+export function isEventVisibleTo(event: Pick<OrgEventRow, "committee_ids">, committeeId: number | null) {
+  return event.committee_ids.length === 0 || (committeeId !== null && event.committee_ids.includes(committeeId));
+}
+
+// "Technology, Finance" for a committee-only event, or null for an all-members event.
+export function committeeLabel(committeeIds: number[], committees: { id?: number; name: string }[]) {
+  if (committeeIds.length === 0) return null;
+  const names = committeeIds
+    .map((id) => committees.find((c) => c.id === id)?.name)
+    .filter((n): n is string => Boolean(n));
+  return names.length > 0 ? names.join(", ") : null;
+}
 
 export const ORG_EVENT_COLUMNS =
   "id, name, date, event_type, points, is_mandatory, location, dresscode, description, check_in_starts_at, check_in_ends_at, strikes_processed";
@@ -61,7 +81,24 @@ export type NewOrgEvent = {
   // Minutes relative to the start time; both null for the default check-in window (start to end).
   check_in_start_offset_minutes: number | null;
   check_in_end_offset_minutes: number | null;
+  // The committees the event is for (committees.id); empty = all members.
+  committee_ids: number[];
 };
+
+// The committee ids from a Create/Edit Event body, or an error. Only the org's own committees
+// (`allowedIds`) are accepted; an empty list means the event is for all members.
+export function parseCommitteeIds(
+  input: unknown,
+  allowedIds: number[]
+): { ids: number[]; error: null } | { ids: null; error: string } {
+  const raw = (input && typeof input === "object" ? (input as { committee_ids?: unknown }).committee_ids : undefined) ?? [];
+  if (!Array.isArray(raw)) return { ids: null, error: "Pick the committees this event is for." };
+  const ids = [...new Set(raw.map((v) => Number(v)))];
+  if (ids.some((id) => !Number.isSafeInteger(id) || !allowedIds.includes(id))) {
+    return { ids: null, error: "Pick committees from your organization's committee list." };
+  }
+  return { ids, error: null };
+}
 
 // The events-table row for a new org event, or an error message. `categories` are the org's
 // point category names; when it has none, only GENERAL_EVENT_TYPE is allowed.

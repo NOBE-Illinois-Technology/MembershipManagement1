@@ -50,12 +50,25 @@ type MemberManagementWidgetProps = {
     attendance: MMAttendance[];
     absences?: MMAbsence[];
     categories?: AttendanceCategory[];
+    // The org's committee names (from Settings). When there are any, the registry gets a
+    // filter per committee; without committees the filter isn't shown.
+    committees?: string[];
     orgName?: string;
     accentColor?: string; // defaults to the Report Card amber
     roleOptions?: string[];
     onChangeRole: (memberId: MMMember["id"], newRole: string) => Promise<void>;
     onDeactivate: (memberId: MMMember["id"]) => Promise<void>;
 };
+
+// Committee filter keys: a committee's name, or one of these.
+const ALL_COMMITTEES = "__all__";
+const NO_COMMITTEE = "__none__";
+
+// The committee filter a member falls under: their committee if it's one of the org's current
+// committees, otherwise "No committee".
+function committeeKey(committee: string | null | undefined, committees: string[]) {
+    return committee && committees.includes(committee) ? committee : NO_COMMITTEE;
+}
 
 const EXCUSED = new Set(["APPROVED", "EXCUSED", "ACCEPTED", "CLEARED"]);
 
@@ -65,6 +78,7 @@ export default function MemberManagementWidget({
     attendance,
     absences = [],
     categories = [],
+    committees = [],
     orgName = "Club",
     accentColor = "#F59E0B",
     roleOptions = ["MEMBER", "ADMIN"],
@@ -73,6 +87,7 @@ export default function MemberManagementWidget({
 }: MemberManagementWidgetProps) {
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState<string>("ALL");
+    const [committeeFilter, setCommitteeFilter] = useState<string>(ALL_COMMITTEES);
     const [selectedId, setSelectedId] = useState<MMMember["id"] | null>(null);
     const [pendingRole, setPendingRole] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
@@ -93,6 +108,7 @@ export default function MemberManagementWidget({
         const q = search.trim().toLowerCase();
         return members.filter((m) => {
             if (roleFilter !== "ALL" && normRole(m.role) !== roleFilter) return false;
+            if (committeeFilter !== ALL_COMMITTEES && committeeKey(m.committee, committees) !== committeeFilter) return false;
             if (!q) return true;
             return (
                 (m.name ?? "").toLowerCase().includes(q) ||
@@ -100,7 +116,17 @@ export default function MemberManagementWidget({
                 (m.committee ?? "").toLowerCase().includes(q)
             );
         });
-    }, [members, search, roleFilter]);
+    }, [members, search, roleFilter, committeeFilter, committees]);
+
+    // Members per committee (plus members with no committee, or one no longer in Settings).
+    const committeeCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        members.forEach((m) => {
+            const key = committeeKey(m.committee, committees);
+            counts[key] = (counts[key] ?? 0) + 1;
+        });
+        return counts;
+    }, [members, committees]);
 
     useEffect(() => {
         if (filteredMembers.length === 0) {
@@ -227,6 +253,35 @@ export default function MemberManagementWidget({
                             />
                         ))}
                     </div>
+
+                    {committees.length > 0 && (
+                        <div className="mmw-chips" role="group" aria-label="Filter by committee">
+                            <span className="mmw-chips-label">Committee</span>
+                            <FilterChip
+                                label="All committees"
+                                count={members.length}
+                                active={committeeFilter === ALL_COMMITTEES}
+                                onClick={() => setCommitteeFilter(ALL_COMMITTEES)}
+                            />
+                            {committees.map((name) => (
+                                <FilterChip
+                                    key={name}
+                                    label={name}
+                                    count={committeeCounts[name] ?? 0}
+                                    active={committeeFilter === name}
+                                    onClick={() => setCommitteeFilter(name)}
+                                />
+                            ))}
+                            {(committeeCounts[NO_COMMITTEE] ?? 0) > 0 && (
+                                <FilterChip
+                                    label="No committee"
+                                    count={committeeCounts[NO_COMMITTEE]}
+                                    active={committeeFilter === NO_COMMITTEE}
+                                    onClick={() => setCommitteeFilter(NO_COMMITTEE)}
+                                />
+                            )}
+                        </div>
+                    )}
 
                     <div className="mmw-list">
                         {filteredMembers.length === 0 ? (
@@ -542,7 +597,8 @@ const CSS = `
 .mmw-search::placeholder { color: #94a3b8; }
 .mmw-search:focus { border-color: var(--mmw-accent); background: #fff; }
 
-.mmw-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.mmw-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; }
+.mmw-chips-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 2px; }
 .mmw-chip {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 4px 10px; border-radius: 8px;
